@@ -1,10 +1,6 @@
 # Open MCP Auth Proxy
 
-The Model Context Protocol (MCP) specification necessitates that MCP servers use OAuth-based authorization. However, directly implementing OAuth in the MCP servers adds complexity, requires specialized knowledge, and shifts focus away from the server's core functionality.
-
-The OpenMCPAuth Proxy, a lightweight proxy, sits in front of MCP servers to secure access by enforcing OAuth standards. Concealing the implementation details, it gives the MCP server the inherent ability to function as an authorization provider.
-
-The proxy intercepts incoming requests and validates Authorization: Bearer tokens, but delegates authentication (user login, consent, token issuance) to an Auth Provider, thereby decoupling authentication logic from the core MCP service. 
+The Open MCP Auth Proxy is a lightweight proxy designed to sit in front of MCP servers and enforce authorization in compliance with the [Model Context Protocol authorization](https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/authorization/) requirements. It intercepts incoming requests, validates Authorization: Bearer tokens, and offloads authentication and authorization to an OAuth-compliant Identity Provider.
 
 ![image](https://github.com/user-attachments/assets/fc728670-2fdb-4a63-bcc4-b9b6a6c8b4ba)
 
@@ -18,7 +14,7 @@ The proxy intercepts incoming requests and validates Authorization: Bearer token
 
 ### **Installation**
 
-```
+```bash
 git clone https://github.com/wso2/open-mcp-auth-proxy  
 cd open-mcp-auth-proxy  
 go build -o openmcpauthproxy ./cmd/proxy
@@ -26,24 +22,29 @@ go build -o openmcpauthproxy ./cmd/proxy
 
 ## Using Open MCP Auth Proxy
 
-### Quick start with demowear 
+### Quick Start 
 
 Allows you to just enable authorization for your MCP server with the preconfigured auth provider powered by Asgardeo.
 
-If you don’t have an MCP server, as mentioned in the prerequisites, follow the instructions given here to start your own MCP server for sandbox purposes. 
+If you don’t have an MCP server, follow the instructions given here to start your own MCP server for testing purposes.
+1. Download [sample MCP server](resources/echo_server.py)
+2. Run the server with
+```bash
+python3 echo_server.py
+```
 
 #### Configure the Auth Proxy
 
 Create a configuration file config.yaml with the following parameters:
 
-```
+```yaml
 mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
 listen_address: ":8080"                       # Address where the proxy will listen
 ```
 
 #### Start the Auth Proxy
 
-```
+```bash
 ./openmcpauthproxy --demo
 ```
 
@@ -67,7 +68,7 @@ Enable authorization for the MCP server through your own Asgardeo organization
 
 Create a configuration file config.yaml with the following parameters:
 
-```
+```yaml
 mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
 listen_address: ":8080"                       # Address where the proxy will listen
 
@@ -79,7 +80,7 @@ asgardeo:
 
 #### Start the Auth Proxy
 
-```
+```bash
 ./openmcpauthproxy --asgardeo
 ```
 
@@ -95,7 +96,7 @@ Enable authorization for the MCP server through your Auth0 organization
 
 Create a configuration file config.yaml with the following parameters:
 
-```
+```yaml
 mcp_server_base_url: "http://localhost:8000"     # URL of your MCP server  
 listen_address: ":8080"                          # Address where the proxy will listen
 ```
@@ -104,7 +105,7 @@ listen_address: ":8080"                          # Address where the proxy will 
 
 #### Start the Auth Proxy
 
-```
+```bash
 ./openmcpauthproxy --auth0
 ```
 
@@ -116,7 +117,7 @@ Enable authorization for the MCP server with a compliant OAuth server
 
 Create a configuration file config.yaml with the following parameters:
 
-```
+```yaml
 mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
 listen_address: ":8080"                       # Address where the proxy will listen
 ```
@@ -124,6 +125,6 @@ listen_address: ":8080"                       # Address where the proxy will lis
 
 #### Start the Auth Proxy
 
-```
+```bash
 ./openmcpauthproxy
 ```
