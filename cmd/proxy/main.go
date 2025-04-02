@@ -29,11 +29,13 @@ func main() {
 	// 2. Create the chosen provider
 	var provider authz.Provider
 	if *demoMode {
+		cfg.Mode = "demo"
 		cfg.AuthServerBaseURL = "https://api.asgardeo.io/t/" + cfg.Demo.OrgName + "/oauth2"
 		cfg.JWKSURL = "https://api.asgardeo.io/t/" + cfg.Demo.OrgName + "/oauth2/jwks"
 		provider = authz.NewAsgardeoProvider(cfg)
 		fmt.Println("Using Asgardeo provider (demo).")
 	} else if *asgardeoMode {
+		cfg.Mode = "asgardeo"
 		cfg.AuthServerBaseURL = "https://api.asgardeo.io/t/" + cfg.Asgardeo.OrgName + "/oauth2"
 		cfg.JWKSURL = "https://api.asgardeo.io/t/" + cfg.Asgardeo.OrgName + "/oauth2/jwks"
 		provider = authz.NewAsgardeoProvider(cfg)

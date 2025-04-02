@@ -19,6 +19,13 @@ type AsgardeoConfig struct {
 	OrgName      string `yaml:"org_name"`
 }
 
+type CORSConfig struct {
+	AllowedOrigins   []string `yaml:"allowed_origins"`
+	AllowedMethods   []string `yaml:"allowed_methods"`
+	AllowedHeaders   []string `yaml:"allowed_headers"`
+	AllowCredentials bool     `yaml:"allow_credentials"`
+}
+
 type Config struct {
 	AuthServerBaseURL string            `yaml:"auth_server_base_url"`
 	MCPServerBaseURL  string            `yaml:"mcp_server_base_url"`
@@ -27,6 +34,8 @@ type Config struct {
 	TimeoutSeconds    int               `yaml:"timeout_seconds"`
 	MCPPaths          []string          `yaml:"mcp_paths"`
 	PathMapping       map[string]string `yaml:"path_mapping"`
+	Mode              string            `yaml:"mode"`
+	CORSConfig        CORSConfig        `yaml:"cors"`
 
 	// Nested config for Asgardeo
 	Demo     DemoConfig     `yaml:"demo"`

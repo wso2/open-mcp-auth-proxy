@@ -1,7 +1,7 @@
 # config.yaml
 
 auth_server_base_url: ""
-mcp_server_base_url: "http://localhost:8000"
+mcp_server_base_url: ""
 listen_address: ":8080"
 jwks_url: ""
 timeout_seconds: 10
@@ -11,6 +11,21 @@ mcp_paths:
   - /sse
 
 path_mapping:
+  /token: /oauth/token
+  /.well-known/oauth-authorization-server: /.well-known/openid-configuration
+
+cors:
+  allowed_origins:
+    - ""
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+  allowed_headers:
+    - "Authorization"
+    - "Content-Type"
+  allow_credentials: true
 
 demo:
   org_name: "openmcpauthdemo"
