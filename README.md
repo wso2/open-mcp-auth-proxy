@@ -62,7 +62,7 @@ Enable authorization for the MCP server through your own Asgardeo organization
 
    3. Note the client ID and client secret of this application. This is required by the auth proxy 
 
-#### Configuration
+#### Configure the Auth Proxy
 
 Create a configuration file config.yaml with the following parameters:
 
