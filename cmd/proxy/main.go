@@ -20,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	// 1. Load config
-	cfg, err := config.LoadConfig("config.yaml")
+	cfg, err := config.LoadConfig("/etc/open-mcp-auth-proxy/config.yaml")
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
