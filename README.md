@@ -32,7 +32,7 @@ Allows you to just enable authorization for your MCP server with the preconfigur
 
 If you don’t have an MCP server, as mentioned in the prerequisites, follow the instructions given here to start your own MCP server for sandbox purposes. 
 
-#### Configuration
+#### Configure the Auth Proxy
 
 Create a configuration file config.yaml with the following parameters:
 
