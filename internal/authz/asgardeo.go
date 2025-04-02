@@ -31,6 +31,7 @@ func (p *asgardeoProvider) WellKnownHandler() http.HandlerFunc {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("X-Accel-Buffering", "no")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
@@ -70,6 +71,7 @@ func (p *asgardeoProvider) WellKnownHandler() http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Accel-Buffering", "no")
 		if err := json.NewEncoder(w).Encode(response); err != nil {
 			log.Printf("[asgardeoProvider] Error encoding well-known: %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -83,6 +85,7 @@ func (p *asgardeoProvider) RegisterHandler() http.HandlerFunc {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("X-Accel-Buffering", "no")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
@@ -124,6 +127,7 @@ func (p *asgardeoProvider) RegisterHandler() http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Accel-Buffering", "no")
 		w.WriteHeader(http.StatusCreated)
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			log.Printf("ERROR: encoding /register response: %v", err)
