@@ -17,6 +17,7 @@ import (
 
 func main() {
 	demoMode := flag.Bool("demo", false, "Use Asgardeo-based provider (demo).")
+	asgardeoMode := flag.Bool("asgardeo", false, "Use Asgardeo-based provider (demo).")
 	flag.Parse()
 
 	// 1. Load config
@@ -32,8 +33,10 @@ func main() {
 		cfg.JWKSURL = "https://api.asgardeo.io/t/" + cfg.Demo.OrgName + "/oauth2/jwks"
 		provider = authz.NewAsgardeoProvider(cfg)
 		fmt.Println("Using Asgardeo provider (demo).")
-	} else {
-		log.Fatalf("Not supported yet.")
+	} else if *asgardeoMode {
+		cfg.AuthServerBaseURL = "https://api.asgardeo.io/t/" + cfg.Asgardeo.OrgName + "/oauth2"
+		cfg.JWKSURL = "https://api.asgardeo.io/t/" + cfg.Asgardeo.OrgName + "/oauth2/jwks"
+		provider = authz.NewAsgardeoProvider(cfg)
 	}
 
 	// 3. (Optional) Fetch JWKS if you want local JWT validation

@@ -13,6 +13,12 @@ type DemoConfig struct {
 	OrgName      string `yaml:"org_name"`
 }
 
+type AsgardeoConfig struct {
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
+	OrgName      string `yaml:"org_name"`
+}
+
 type Config struct {
 	AuthServerBaseURL string            `yaml:"auth_server_base_url"`
 	MCPServerBaseURL  string            `yaml:"mcp_server_base_url"`
@@ -23,7 +29,8 @@ type Config struct {
 	PathMapping       map[string]string `yaml:"path_mapping"`
 
 	// Nested config for Asgardeo
-	Demo DemoConfig `yaml:"demo"`
+	Demo     DemoConfig     `yaml:"demo"`
+	Asgardeo AsgardeoConfig `yaml:"asgardeo"`
 }
 
 // LoadConfig reads a YAML config file into Config struct.

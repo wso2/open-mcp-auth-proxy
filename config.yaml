@@ -16,3 +16,8 @@ demo:
   org_name: "openmcpauthdemo"
   client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
   client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"
+
+asgardeo:
+  org_name: "<org_name>"
+  client_id: "<client_id>"
+  client_secret: "<client_secret>"
