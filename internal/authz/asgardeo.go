@@ -298,6 +298,10 @@ func buildAsgardeoPayload(regReq RegisterRequest) map[string]interface{} {
 							"idp":           "GitHub",
 							"authenticator": "GithubAuthenticator",
 						},
+						{
+							"idp":           "Microsoft",
+							"authenticator": "OpenIDConnectAuthenticator",
+						},
 					},
 				},
 			},

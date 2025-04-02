@@ -33,7 +33,7 @@ func main() {
 		provider = authz.NewAsgardeoProvider(cfg)
 		fmt.Println("Using Asgardeo provider (demo).")
 	} else {
-		log.Fatalf("Not suppoted yet.")
+		log.Fatalf("Not supported yet.")
 	}
 
 	// 3. (Optional) Fetch JWKS if you want local JWT validation
