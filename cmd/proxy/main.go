@@ -17,7 +17,7 @@ import (
 
 func main() {
 	demoMode := flag.Bool("demo", false, "Use Asgardeo-based provider (demo).")
-	asgardeoMode := flag.Bool("asgardeo", false, "Use Asgardeo-based provider (demo).")
+	asgardeoMode := flag.Bool("asgardeo", false, "Use Asgardeo-based provider (asgardeo).")
 	flag.Parse()
 
 	// 1. Load config

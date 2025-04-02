@@ -8,7 +8,6 @@ OpenMCPAuthProxy is a security middleware that implements the Model Context Prot
 
 ### Prerequisites
 - Go 1.20 or higher
-- A running MCP server (SSE transport supported)
 
 ### Installation
 ```bash
@@ -21,10 +20,25 @@ go build -o openmcpauthproxy ./cmd/proxy
 
 Create a configuration file `config.yaml` with the following parameters:
 
+### demo mode configuration:
+
 ```yaml
 mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server
 listen_address: ":8080"                       # Address where the proxy will listen
 ```
+
+### asgardeo configuration:
+
+```yaml 
+mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server
+listen_address: ":8080"                       # Address where the proxy will listen
+
+asgardeo:
+    org_name: "your-org-name"
+    client_id: "your-client-id"
+    client_secret: "your-client-secret"
+ ``` 
+
 
 ## Usage Example
 
@@ -70,7 +84,7 @@ python3 echo_server.py
 ./openmcpauthproxy --demo
 ```
 
-The `--demo` flag enables a demonstration mode with pre-configured authentication with [Asgardeo](https://asgardeo.io/).
+The `--demo` flag enables a demonstration mode with pre-configured authentication with [Asgardeo](https://asgardeo.io/) You can also use the `--asgardeo` flag to use your own Asgardeo configuration.
 
 ### 3. Connect Using an MCP Client
 
