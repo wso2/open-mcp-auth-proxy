@@ -43,7 +43,7 @@ listen\_address: ":8080"                       \# Address where the proxy will l
 
 #### Start the Auth Proxy
 
-`./openmcpauthproxy \--demo
+```./openmcpauthproxy \--demo```
 
 The \--demo flag enables a demonstration mode with pre-configured authentication with a sandbox powered by [Asgardeo](https://asgardeo.io/).
 
@@ -75,7 +75,7 @@ TODO: Update the configs for asgardeo.
 
 #### Start the Auth Proxy
 
-```./openmcpauthproxy \--asgardeo
+`./openmcpauthproxy \--asgardeo`
 
 ### Use with Auth0
 
@@ -90,13 +90,14 @@ TODO: Add instructions
 Create a configuration file config.yaml with the following parameters:
 
 ```mcp\_server\_base\_url: "http://localhost:8000"  \# URL of your MCP server  
-listen\_address: ":8080"                       \# Address where the proxy will listen```
-`
+listen\_address: ":8080"                       \# Address where the proxy will listen
+```
+
 TODO: Update the configs for Auth0.
 
 #### Start the Auth Proxy
 
-```./openmcpauthproxy \--auth0
+```./openmcpauthproxy \--auth0```
 
 ### Use with a standard OAuth Server
 
@@ -108,10 +109,12 @@ TODO:Add instructions
 
 Create a configuration file config.yaml with the following parameters:
 
-```mcp\_server\_base\_url: "http://localhost:8000"  \# URL of your MCP server  
-listen\_address: ":8080"                       \# Address where the proxy will listen  
-TODO: Update the configs for a standard OAuth Server.```
+```
+mcp\_server\_base\_url: "http://localhost:8000"  \# URL of your MCP server  
+listen\_address: ":8080"                       \# Address where the proxy will listen
+```
+TODO: Update the configs for a standard OAuth Server.
 
 #### Start the Auth Proxy
 
-```./openmcpauthproxy
+```./openmcpauthproxy```
