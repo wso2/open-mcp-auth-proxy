@@ -70,7 +70,7 @@ python3 echo_server.py
 ./openmcpauthproxy --demo
 ```
 
-The `--demo` flag enables a demonstration mode with pre-configured authentication with asgardeo.
+The `--demo` flag enables a demonstration mode with pre-configured authentication with [Asgardeo](https://asgardeo.io/).
 
 ### 3. Connect Using an MCP Client
 
