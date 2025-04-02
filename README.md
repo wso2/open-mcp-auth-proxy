@@ -1,81 +1,117 @@
-# open-mcp-auth-proxy
+# Open MCP Auth Proxy
 
-## Overview
+The Model Context Protocol (MCP) specification necessitates that MCP servers use OAuth-based authorization. However, directly implementing OAuth in the MCP servers adds complexity, requires specialized knowledge, and shifts focus away from the server's core functionality.
 
-OpenMCPAuthProxy is a security middleware that implements the Model Context Protocol (MCP) Authorization Specification (2025-03-26). It functions as a proxy between clients and MCP servers, providing robust authentication and authorization capabilities. The proxy intercepts incoming requests, validates authentication tokens, and forwards only authorized requests to the underlying MCP server, enhancing the security posture of your MCP deployment.
+The OpenMCPAuth Proxy, a lightweight proxy, sits in front of MCP servers to secure access by enforcing OAuth standards. Concealing the implementation details, it gives the MCP server the inherent ability to function as an authorization provider.
 
-## Setup and Installation
+The proxy intercepts incoming requests and validates Authorization: Bearer tokens, but delegates authentication (user login, consent, token issuance) to an Auth Provider, thereby decoupling authentication logic from the core MCP service. 
 
-### Prerequisites
-- Go 1.20 or higher
-- A running MCP server (SSE transport supported)
+![image](https://github.com/user-attachments/assets/fc728670-2fdb-4a63-bcc4-b9b6a6c8b4ba)
 
-### Installation
-```bash
-git clone https://github.com/wso2/open-mcp-auth-proxy
-cd open-mcp-auth-proxy
-go build -o openmcpauthproxy ./cmd/proxy
+## **Setup and Installation**
+
+### **Prerequisites**
+
+* Go 1.20 or higher  
+* A running MCP server (SSE transport supported)  
+* An MCP client that supports MCP authorization 
+
+### **Installation**
+
+```
+git clone https://github.com/wso2/open-mcp-auth-proxy  
+cd open-mcp-auth-proxy  
+go build \-o openmcpauthproxy ./cmd/proxy
 ```
 
-## Configuration
+## Using Open MCP Auth Proxy
 
-Create a configuration file `config.yaml` with the following parameters:
+### Quick start with demowear 
 
-```yaml
-mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server
-listen_address: ":8080"                       # Address where the proxy will listen
+Allows you to just enable authorization for your MCP server with the preconfigured auth provider powered by Asgardeo.
+
+If you don’t have an MCP server, as mentioned in the prerequisites, follow the instructions given here to start your own MCP server for sandbox purposes. 
+
+#### Configuration
+
+Create a configuration file config.yaml with the following parameters:
+
+```
+mcp\_server\_base\_url: "http://localhost:8000"  \# URL of your MCP server  
+listen\_address: ":8080"                       \# Address where the proxy will listen
 ```
 
-## Usage Example
+#### Start the Auth Proxy
 
-### 1. Start the MCP Server
+`./openmcpauthproxy \--demo
 
-Create a file named `echo_server.py`:
+The \--demo flag enables a demonstration mode with pre-configured authentication with a sandbox powered by [Asgardeo](https://asgardeo.io/).
 
-```python
-from mcp.server.fastmcp import FastMCP
-
-mcp = FastMCP("Echo")
-
-
-@mcp.resource("echo://{message}")
-def echo_resource(message: str) -> str:
-    """Echo a message as a resource"""
-    return f"Resource echo: {message}"
-
-
-@mcp.tool()
-def echo_tool(message: str) -> str:
-    """Echo a message as a tool"""
-    return f"Tool echo: {message}"
-
-
-@mcp.prompt()
-def echo_prompt(message: str) -> str:
-    """Create an echo prompt"""
-    return f"Please process this message: {message}"
-
-if __name__ == "__main__":
-    mcp.run(transport="sse")
-```
-
-Run the server:
-```bash
-python3 echo_server.py
-```
-
-### 2. Start the Auth Proxy
-
-```bash
-./openmcpauthproxy --demo
-```
-
-The `--demo` flag enables a demonstration mode with pre-configured authentication with [Asgardeo](https://asgardeo.io/).
-
-### 3. Connect Using an MCP Client
+#### Connect Using an MCP Client
 
 You can use the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) to test the connection:
 
-## Contributing
+### Use with Asgardeo
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Enable authorization for the MCP server through your own Asgardeo organization
+
+1. Register for Asgaradeo and create an organization for you  
+2. Create an [M2M application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/)  
+   1. Enable client credential grant   
+   2. Authorize “Application Management API” internal\_application\_mgt\_create all scopes![][image2]
+
+   3. Note the client ID and client secret of this application. This is required by the auth proxy 
+
+#### Configuration
+
+Create a configuration file config.yaml with the following parameters:
+
+```
+mcp\_server\_base\_url: "http://localhost:8000"  \# URL of your MCP server  
+listen\_address: ":8080"                       \# Address where the proxy will listen
+```
+
+TODO: Update the configs for asgardeo.
+
+#### Start the Auth Proxy
+
+```./openmcpauthproxy \--asgardeo
+
+### Use with Auth0
+
+Enable authorization for the MCP server through your Auth0 organization
+
+TODO: Add instructions
+
+[Enable dynamic application registration](https://auth0.com/docs/get-started/applications/dynamic-client-registration#enable-dynamic-client-registration) in your Auth0 organization
+
+#### Configuration
+
+Create a configuration file config.yaml with the following parameters:
+
+```mcp\_server\_base\_url: "http://localhost:8000"  \# URL of your MCP server  
+listen\_address: ":8080"                       \# Address where the proxy will listen```
+`
+TODO: Update the configs for Auth0.
+
+#### Start the Auth Proxy
+
+```./openmcpauthproxy \--auth0
+
+### Use with a standard OAuth Server
+
+Enable authorization for the MCP server with a compliant OAuth server
+
+TODO:Add instructions
+
+#### Configuration
+
+Create a configuration file config.yaml with the following parameters:
+
+```mcp\_server\_base\_url: "http://localhost:8000"  \# URL of your MCP server  
+listen\_address: ":8080"                       \# Address where the proxy will listen  
+TODO: Update the configs for a standard OAuth Server.```
+
+#### Start the Auth Proxy
+
+```./openmcpauthproxy
