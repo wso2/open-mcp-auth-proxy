@@ -85,7 +85,7 @@ TODO: Add instructions
 
 [Enable dynamic application registration](https://auth0.com/docs/get-started/applications/dynamic-client-registration#enable-dynamic-client-registration) in your Auth0 organization
 
-#### Configuration
+#### Configure the Auth Proxy
 
 Create a configuration file config.yaml with the following parameters:
 
