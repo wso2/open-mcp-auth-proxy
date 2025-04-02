@@ -1,0 +1,18 @@
+# config.yaml
+
+auth_server_base_url: ""
+mcp_server_base_url: "http://localhost:8000"
+listen_address: ":8080"
+jwks_url: ""
+timeout_seconds: 10
+
+mcp_paths:
+  - /messages/
+  - /sse
+
+path_mapping:
+
+demo:
+  org_name: "openmcpauthdemo"
+  client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
+  client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"
