@@ -89,32 +89,7 @@ asgardeo:
 ./openmcpauthproxy --asgardeo
 ```
 
-### Use with Auth0
-
-Enable authorization for the MCP server through your Auth0 organization
-
-**TODO**: Add instructions
-
-[Enable dynamic application registration](https://auth0.com/docs/get-started/applications/dynamic-client-registration#enable-dynamic-client-registration) in your Auth0 organization
-
-#### Configure the Auth Proxy
-
-Create a configuration file config.yaml with the following parameters:
-
-```yaml
-mcp_server_base_url: "http://localhost:8000"     # URL of your MCP server  
-listen_address: ":8080"                          # Address where the proxy will listen
-```
-
-**TODO**: Update the configs for Auth0.
-
-#### Start the Auth Proxy
-
-```bash
-./openmcpauthproxy --auth0
-```
-
-### Use with a standard OAuth Server
+### Use with any standard OAuth Server
 
 Enable authorization for the MCP server with a compliant OAuth server
 
@@ -133,3 +108,6 @@ listen_address: ":8080"                       # Address where the proxy will lis
 ```bash
 ./openmcpauthproxy
 ```
+#### Integrating with existing OAuth Providers
+
+ - [Auth0](URL) - Enable authorization for the MCP server through your Auth0 organization. **TODO**: Add instructions under docs and link
