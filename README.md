@@ -24,7 +24,7 @@ go build -o openmcpauthproxy ./cmd/proxy
 
 ### Quick Start 
 
-Allows you to just enable authorization for your MCP server with the preconfigured auth provider powered by Asgardeo.
+Allows you to just enable authentication and authorization for your MCP server with the preconfigured auth provider powered by Asgardeo.
 
 If you don’t have an MCP server, follow the instructions given here to start your own MCP server for testing purposes.
 1. Download [sample MCP server](resources/echo_server.py)
@@ -48,21 +48,22 @@ listen_address: ":8080"                       # Address where the proxy will lis
 ./openmcpauthproxy --demo
 ```
 
-The `--demo` flag enables a demonstration mode with pre-configured authentication with a sandbox powered by [Asgardeo](https://asgardeo.io/).
+The `--demo` flag enables a demonstration mode with pre-configured authentication and authorization with a sandbox powered by [Asgardeo](https://asgardeo.io/).
 
 #### Connect Using an MCP Client
 
-You can use the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) to test the connection
+You can use the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) to test the connection and try out the complete authorization flow.
 
 ### Use with Asgardeo
 
 Enable authorization for the MCP server through your own Asgardeo organization
 
 1. [Register]([url](https://asgardeo.io/signup)) and create an organization in Asgardeo
-2. Create an [M2M application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/)  
-   1. Authorize “Application Management API” with `internal_application_mgt_create` all scopes
-      ![image](https://github.com/user-attachments/assets/0bd57cac-1904-48cc-b7aa-0530224bc41a)
-   2. Note the client ID and client secret of this application. This is required by the auth proxy 
+2. Now, you need to authorize the OpenMCPAuthProxy to allow dynamically registering MCP Clients as applications in your organization. To do that,
+   1. Create an [M2M application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/)  
+         1. [Authorize this application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/#authorize-the-api-resources-for-the-app) to invoke “Application Management API” with the `internal_application_mgt_create` scope. 
+             ![image](https://github.com/user-attachments/assets/0bd57cac-1904-48cc-b7aa-0530224bc41a)
+         2. Note the **Client ID** and **Client secret** of this application. This is required by the auth proxy 
 
 #### Configure the Auth Proxy
 
