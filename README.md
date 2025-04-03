@@ -58,7 +58,7 @@ The `--demo` flag enables a demonstration mode with pre-configured authenticatio
 
 #### Connect Using an MCP Client
 
-You can use the [MCP Inspector](https://github.com/shashimalcse/inspector) to test the connection and try out the complete authorization flow.
+You can use the [MCP Inspector](https://github.com/shashimalcse/inspector) to test the connection and try out the complete authorization flow. (we've linked to a forked version that includes fixes for authentication issues in the original implementation).
 
 ### Use with Asgardeo
 
