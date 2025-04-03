@@ -11,6 +11,7 @@ import (
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
+	"github.com/wso2/open-mcp-auth-proxy/internal/constants"
 	"github.com/wso2/open-mcp-auth-proxy/internal/proxy"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
@@ -30,15 +31,19 @@ func main() {
 	var provider authz.Provider
 	if *demoMode {
 		cfg.Mode = "demo"
-		cfg.AuthServerBaseURL = "https://api.asgardeo.io/t/" + cfg.Demo.OrgName + "/oauth2"
-		cfg.JWKSURL = "https://api.asgardeo.io/t/" + cfg.Demo.OrgName + "/oauth2/jwks"
+		cfg.AuthServerBaseURL = constants.ASGARDEO_BASE_URL + cfg.Demo.OrgName + "/oauth2"
+		cfg.JWKSURL = constants.ASGARDEO_BASE_URL + cfg.Demo.OrgName + "/oauth2/jwks"
 		provider = authz.NewAsgardeoProvider(cfg)
-		fmt.Println("Using Asgardeo provider (demo).")
 	} else if *asgardeoMode {
 		cfg.Mode = "asgardeo"
-		cfg.AuthServerBaseURL = "https://api.asgardeo.io/t/" + cfg.Asgardeo.OrgName + "/oauth2"
-		cfg.JWKSURL = "https://api.asgardeo.io/t/" + cfg.Asgardeo.OrgName + "/oauth2/jwks"
+		cfg.AuthServerBaseURL = constants.ASGARDEO_BASE_URL + cfg.Asgardeo.OrgName + "/oauth2"
+		cfg.JWKSURL = constants.ASGARDEO_BASE_URL + cfg.Asgardeo.OrgName + "/oauth2/jwks"
 		provider = authz.NewAsgardeoProvider(cfg)
+	} else {
+		cfg.Mode = "default"
+		cfg.JWKSURL = cfg.Default.JWKSURL
+		cfg.AuthServerBaseURL = cfg.Default.BaseURL
+		provider = authz.NewDefaultProvider(cfg)
 	}
 
 	// 3. (Optional) Fetch JWKS if you want local JWT validation

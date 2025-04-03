@@ -1,9 +1,7 @@
 # config.yaml
 
-auth_server_base_url: ""
 mcp_server_base_url: ""
 listen_port: 8080
-jwks_url: ""
 timeout_seconds: 10
 
 mcp_paths:
@@ -11,8 +9,10 @@ mcp_paths:
   - /sse
 
 path_mapping:
-  /token: /oauth/token
-  /.well-known/oauth-authorization-server: /.well-known/openid-configuration
+  /token: /token
+  /register: /register
+  /authorize: /authorize
+  /.well-known/oauth-authorization-server: /.well-known/oauth-authorization-server
 
 cors:
   allowed_origins:
@@ -36,3 +36,36 @@ asgardeo:
   org_name: "<org_name>"
   client_id: "<client_id>"
   client_secret: "<client_secret>"
+
+default:
+  base_url: "<base_url>"
+  jwks_url: "<jwks_url>"
+  path:
+    /.well-known/oauth-authorization-server:
+      response:
+        issuer: "<issuer>"
+        jwks_uri: "<jwks_uri>"
+        authorization_endpoint: "<authorization_endpoint>" # Optional
+        token_endpoint: "<token_endpoint>" # Optional
+        registration_endpoint: "<registration_endpoint>" # Optional
+        response_types_supported: 
+          - "code"
+        grant_types_supported:
+          - "authorization_code"
+          - "refresh_token"
+        code_challenge_methods_supported:
+          - "S256"
+          - "plain"  
+    /authroize:
+      addQueryParams:
+        - name: "<name>"
+          value: "<value>"
+    /token:
+      addBodyParams:
+        - name: "<name>"
+          value: "<value>"
+    /register:
+      addBodyParams:
+        - name: "<name>"
+          value: "<value>"
+

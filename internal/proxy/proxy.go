@@ -20,38 +20,77 @@ import (
 func NewRouter(cfg *config.Config, provider authz.Provider) http.Handler {
 	mux := http.NewServeMux()
 
+	modifiers := map[string]RequestModifier{
+		"/authorize": &AuthorizationModifier{Config: cfg},
+		"/token":     &TokenModifier{Config: cfg},
+		"/register":  &RegisterModifier{Config: cfg},
+	}
+
 	registeredPaths := make(map[string]bool)
 
 	var defaultPaths []string
+
+	// Handle based on mode configuration
 	if cfg.Mode == "demo" || cfg.Mode == "asgardeo" {
-		// 1. Custom well-known
+		// Demo/Asgardeo mode: Custom handlers for well-known and register
 		mux.HandleFunc("/.well-known/oauth-authorization-server", provider.WellKnownHandler())
 		registeredPaths["/.well-known/oauth-authorization-server"] = true
 
-		// 2. Registration
 		mux.HandleFunc("/register", provider.RegisterHandler())
 		registeredPaths["/register"] = true
 
+		// Authorize and token will be proxied with parameter modification
 		defaultPaths = []string{"/authorize", "/token"}
 	} else {
-		defaultPaths = []string{"/authorize", "/token", "/register", "/.well-known/oauth-authorization-server"}
+		// Default provider mode
+		if cfg.Default.Path != nil {
+			// Check if we have custom response for well-known
+			wellKnownConfig, exists := cfg.Default.Path["/.well-known/oauth-authorization-server"]
+			if exists && wellKnownConfig.Response != nil {
+				// If there's a custom response defined, use our handler
+				mux.HandleFunc("/.well-known/oauth-authorization-server", provider.WellKnownHandler())
+				registeredPaths["/.well-known/oauth-authorization-server"] = true
+			} else {
+				// No custom response, add well-known to proxy paths
+				defaultPaths = append(defaultPaths, "/.well-known/oauth-authorization-server")
+			}
+
+			defaultPaths = append(defaultPaths, "/authorize")
+			defaultPaths = append(defaultPaths, "/token")
+			defaultPaths = append(defaultPaths, "/register")
+		} else {
+			defaultPaths = []string{"/authorize", "/token", "/register", "/.well-known/oauth-authorization-server"}
+		}
 	}
+
+	// Remove duplicates from defaultPaths
+	uniquePaths := make(map[string]bool)
+	cleanPaths := []string{}
+	for _, path := range defaultPaths {
+		if !uniquePaths[path] {
+			uniquePaths[path] = true
+			cleanPaths = append(cleanPaths, path)
+		}
+	}
+	defaultPaths = cleanPaths
 
 	for _, path := range defaultPaths {
-		mux.HandleFunc(path, buildProxyHandler(cfg))
-		registeredPaths[path] = true
+		if !registeredPaths[path] {
+			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers))
+			registeredPaths[path] = true
+		}
 	}
 
-	// 4. MCP paths
+	// MCP paths
 	for _, path := range cfg.MCPPaths {
-		mux.HandleFunc(path, buildProxyHandler(cfg))
+		mux.HandleFunc(path, buildProxyHandler(cfg, modifiers))
 		registeredPaths[path] = true
 	}
 
-	// 5. Register paths from PathMapping that haven't been registered yet
+	// Register paths from PathMapping that haven't been registered yet
 	for path := range cfg.PathMapping {
 		if !registeredPaths[path] {
-			mux.HandleFunc(path, buildProxyHandler(cfg))
+			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers))
 			registeredPaths[path] = true
 		}
 	}
@@ -59,8 +98,9 @@ func NewRouter(cfg *config.Config, provider authz.Provider) http.Handler {
 	return mux
 }
 
-func buildProxyHandler(cfg *config.Config) http.HandlerFunc {
+func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier) http.HandlerFunc {
 	// Parse the base URLs up front
+
 	authBase, err := url.Parse(cfg.AuthServerBaseURL)
 	if err != nil {
 		log.Fatalf("Invalid auth server URL: %v", err)
@@ -125,6 +165,17 @@ func buildProxyHandler(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
+		// Apply request modifiers to add parameters
+		if modifier, exists := modifiers[r.URL.Path]; exists {
+			var err error
+			r, err = modifier.ModifyRequest(r)
+			if err != nil {
+				log.Printf("[proxy] Error modifying request: %v", err)
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+		}
+
 		// Build the reverse proxy
 		rp := &httputil.ReverseProxy{
 			Director: func(req *http.Request) {
@@ -152,22 +203,7 @@ func buildProxyHandler(cfg *config.Config) http.HandlerFunc {
 					cleanHeaders.Set(k, v[0])
 				}
 
-				// Override or remove sensitive headers if needed
-				if strings.Contains(req.URL.Path, "/token") {
-					cleanHeaders.Set("Accept", "application/json")
-					cleanHeaders.Set("Content-Type", "application/x-www-form-urlencoded")
-					cleanHeaders.Set("User-Agent", "GoProxy/1.0")
-					cleanHeaders.Del("Origin")
-					cleanHeaders.Del("Referer")
-				}
-
 				req.Header = cleanHeaders
-
-				// DEBUG: log headers sent to Asgardeo
-				log.Println("[proxy] Outgoing request headers:")
-				for k, v := range req.Header {
-					log.Printf("  %s: %s", k, strings.Join(v, ", "))
-				}
 
 				log.Printf("[proxy] %s -> %s%s", r.URL.Path, req.URL.Host, req.URL.Path)
 			},
@@ -226,7 +262,11 @@ func isAuthPath(path string) bool {
 	authPaths := map[string]bool{
 		"/authorize": true,
 		"/token":     true,
+		"/register":  true,
 		"/.well-known/oauth-authorization-server": true,
+	}
+	if strings.HasPrefix(path, "/u/") {
+		return true
 	}
 	return authPaths[path]
 }
