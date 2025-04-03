@@ -2,7 +2,7 @@
 
 The Open MCP Auth Proxy is a lightweight proxy designed to sit in front of MCP servers and enforce authorization in compliance with the [Model Context Protocol authorization](https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/authorization/) requirements. It intercepts incoming requests, validates tokens, and offloads authentication and authorization to an OAuth-compliant Identity Provider.
 
-![image](https://github.com/user-attachments/assets/fc728670-2fdb-4a63-bcc4-b9b6a6c8b4ba)
+![image](https://github.com/user-attachments/assets/41cf6723-c488-4860-8640-8fec45006f92)
 
 ## **Setup and Installation**
 
