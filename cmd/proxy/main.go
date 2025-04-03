@@ -49,14 +49,17 @@ func main() {
 	// 4. Build the main router
 	mux := proxy.NewRouter(cfg, provider)
 
+	listen_address := fmt.Sprintf(":%d", cfg.ListenPort)
+
 	// 5. Start the server
 	srv := &http.Server{
-		Addr:    cfg.ListenAddress,
+
+		Addr:    listen_address,
 		Handler: mux,
 	}
 
 	go func() {
-		log.Printf("Server listening on %s", cfg.ListenAddress)
+		log.Printf("Server listening on %s", listen_address)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server error: %v", err)
 		}

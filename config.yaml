@@ -2,7 +2,7 @@
 
 auth_server_base_url: ""
 mcp_server_base_url: ""
-listen_address: ":8080"
+listen_port: 8080
 jwks_url: ""
 timeout_seconds: 10
 

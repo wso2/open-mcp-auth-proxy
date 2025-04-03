@@ -29,7 +29,7 @@ type CORSConfig struct {
 type Config struct {
 	AuthServerBaseURL string            `yaml:"auth_server_base_url"`
 	MCPServerBaseURL  string            `yaml:"mcp_server_base_url"`
-	ListenAddress     string            `yaml:"listen_address"`
+	ListenPort        int               `yaml:"listen_port"`
 	JWKSURL           string            `yaml:"jwks_url"`
 	TimeoutSeconds    int               `yaml:"timeout_seconds"`
 	MCPPaths          []string          `yaml:"mcp_paths"`
