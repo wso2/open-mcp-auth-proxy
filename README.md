@@ -45,7 +45,7 @@ Update the following parameters in `config.yaml`.
 
 ```yaml
 mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
-listen_address: ":8080"                       # Address where the proxy will listen
+listen_port: 8080                             # Address where the proxy will listen
 ```
 
 #### Start the Auth Proxy
@@ -58,7 +58,7 @@ The `--demo` flag enables a demonstration mode with pre-configured authenticatio
 
 #### Connect Using an MCP Client
 
-You can use the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) to test the connection and try out the complete authorization flow.
+You can use the [MCP Inspector](https://github.com/shashimalcse/inspector) to test the connection and try out the complete authorization flow.
 
 ### Use with Asgardeo
 
@@ -101,7 +101,7 @@ Create a configuration file config.yaml with the following parameters:
 
 ```yaml
 mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
-listen_address: ":8080"                       # Address where the proxy will listen
+listen_port: 8080                             # Address where the proxy will listen
 ```
 **TODO**: Update the configs for a standard OAuth Server.
 
