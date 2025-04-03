@@ -17,6 +17,10 @@ The Open MCP Auth Proxy is a lightweight proxy designed to sit in front of MCP s
 ```bash
 git clone https://github.com/wso2/open-mcp-auth-proxy  
 cd open-mcp-auth-proxy  
+
+go get github.com/golang-jwt/jwt/v4
+go get gopkg.in/yaml.v2
+
 go build -o openmcpauthproxy ./cmd/proxy
 ```
 
@@ -35,7 +39,7 @@ python3 echo_server.py
 
 #### Configure the Auth Proxy
 
-Create a configuration file config.yaml with the following parameters:
+Update the following parameters in `config.yaml`.
 
 ```yaml
 mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
