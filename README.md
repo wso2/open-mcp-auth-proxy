@@ -112,4 +112,4 @@ listen_address: ":8080"                       # Address where the proxy will lis
 ```
 #### Integrating with existing OAuth Providers
 
- - [Auth0](URL) - Enable authorization for the MCP server through your Auth0 organization. **TODO**: Add instructions under docs and link
+ - [Auth0](docs/Auth0.md) - Enable authorization for the MCP server through your Auth0 organization.
