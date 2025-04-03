@@ -77,7 +77,7 @@ Create a configuration file config.yaml with the following parameters:
 
 ```yaml
 mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
-listen_address: ":8080"                       # Address where the proxy will listen
+listen_port: 8080                             # Address where the proxy will listen
 
 asgardeo:                                     
   org_name: "<org_name>"                      # Your Asgardeo org name
