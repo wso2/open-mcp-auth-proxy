@@ -12,7 +12,7 @@ This guide will help you configure Open MCP Auth Proxy to use Auth0 as your iden
     - Go to your Auth0 dashboard
     - Navigate to Settings > Advanced
     - Enable "OIDC Dynamic Application Registration"
-2. Inorder to setup connections in dynamically created clients [promote Connections to Domain Level](https://auth0.com/docs/authenticate/identity-providers/promote-connections-to-domain-level)
+2. In order to setup connections in dynamically created clients [promote Connections to Domain Level](https://auth0.com/docs/authenticate/identity-providers/promote-connections-to-domain-level)
 3. Create an API in Auth0:
    - Go to your Auth0 dashboard
    - Navigate to Applications > APIs
