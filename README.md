@@ -41,6 +41,8 @@ python3 echo_server.py
 
 Update the following parameters in `config.yaml`.
 
+### demo mode configuration:
+
 ```yaml
 mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
 listen_address: ":8080"                       # Address where the proxy will listen
