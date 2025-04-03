@@ -20,34 +20,87 @@ import (
 func NewRouter(cfg *config.Config, provider authz.Provider) http.Handler {
 	mux := http.NewServeMux()
 
-	// 1. Custom well-known
-	mux.HandleFunc("/.well-known/oauth-authorization-server", provider.WellKnownHandler())
+	modifiers := map[string]RequestModifier{
+		"/authorize": &AuthorizationModifier{Config: cfg},
+		"/token":     &TokenModifier{Config: cfg},
+		"/register":  &RegisterModifier{Config: cfg},
+	}
 
-	// 2. Registration
-	mux.HandleFunc("/register", provider.RegisterHandler())
+	registeredPaths := make(map[string]bool)
 
-	// 3. Default "auth" paths, proxied
-	defaultPaths := []string{"/authorize", "/token"}
+	var defaultPaths []string
+
+	// Handle based on mode configuration
+	if cfg.Mode == "demo" || cfg.Mode == "asgardeo" {
+		// Demo/Asgardeo mode: Custom handlers for well-known and register
+		mux.HandleFunc("/.well-known/oauth-authorization-server", provider.WellKnownHandler())
+		registeredPaths["/.well-known/oauth-authorization-server"] = true
+
+		mux.HandleFunc("/register", provider.RegisterHandler())
+		registeredPaths["/register"] = true
+
+		// Authorize and token will be proxied with parameter modification
+		defaultPaths = []string{"/authorize", "/token"}
+	} else {
+		// Default provider mode
+		if cfg.Default.Path != nil {
+			// Check if we have custom response for well-known
+			wellKnownConfig, exists := cfg.Default.Path["/.well-known/oauth-authorization-server"]
+			if exists && wellKnownConfig.Response != nil {
+				// If there's a custom response defined, use our handler
+				mux.HandleFunc("/.well-known/oauth-authorization-server", provider.WellKnownHandler())
+				registeredPaths["/.well-known/oauth-authorization-server"] = true
+			} else {
+				// No custom response, add well-known to proxy paths
+				defaultPaths = append(defaultPaths, "/.well-known/oauth-authorization-server")
+			}
+
+			defaultPaths = append(defaultPaths, "/authorize")
+			defaultPaths = append(defaultPaths, "/token")
+			defaultPaths = append(defaultPaths, "/register")
+		} else {
+			defaultPaths = []string{"/authorize", "/token", "/register", "/.well-known/oauth-authorization-server"}
+		}
+	}
+
+	// Remove duplicates from defaultPaths
+	uniquePaths := make(map[string]bool)
+	cleanPaths := []string{}
 	for _, path := range defaultPaths {
-		mux.HandleFunc(path, buildProxyHandler(cfg))
+		if !uniquePaths[path] {
+			uniquePaths[path] = true
+			cleanPaths = append(cleanPaths, path)
+		}
+	}
+	defaultPaths = cleanPaths
+
+	for _, path := range defaultPaths {
+		if !registeredPaths[path] {
+			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers))
+			registeredPaths[path] = true
+		}
 	}
 
-	// 4. MCP paths
+	// MCP paths
 	for _, path := range cfg.MCPPaths {
-		mux.HandleFunc(path, buildProxyHandler(cfg))
+		mux.HandleFunc(path, buildProxyHandler(cfg, modifiers))
+		registeredPaths[path] = true
 	}
 
-	// 5. If you want to map additional paths from config.PathMapping
-	//    to the same proxy logic:
+	// Register paths from PathMapping that haven't been registered yet
 	for path := range cfg.PathMapping {
-		mux.HandleFunc(path, buildProxyHandler(cfg))
+		if !registeredPaths[path] {
+			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers))
+			registeredPaths[path] = true
+		}
 	}
 
 	return mux
 }
 
-func buildProxyHandler(cfg *config.Config) http.HandlerFunc {
+func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier) http.HandlerFunc {
 	// Parse the base URLs up front
+
 	authBase, err := url.Parse(cfg.AuthServerBaseURL)
 	if err != nil {
 		log.Fatalf("Invalid auth server URL: %v", err)
@@ -55,13 +108,6 @@ func buildProxyHandler(cfg *config.Config) http.HandlerFunc {
 	mcpBase, err := url.Parse(cfg.MCPServerBaseURL)
 	if err != nil {
 		log.Fatalf("Invalid MCP server URL: %v", err)
-	}
-
-	// We'll define sets for known auth paths, SSE paths, etc.
-	authPaths := map[string]bool{
-		"/authorize": true,
-		"/token":     true,
-		"/.well-known/oauth-authorization-server": true,
 	}
 
 	// Detect SSE paths from config
@@ -73,23 +119,38 @@ func buildProxyHandler(cfg *config.Config) http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		allowedOrigin := getAllowedOrigin(origin, cfg)
 		// Handle OPTIONS
 		if r.Method == http.MethodOptions {
-			addCORSHeaders(w)
+			if allowedOrigin == "" {
+				log.Printf("[proxy] Preflight request from disallowed origin: %s", origin)
+				http.Error(w, "CORS origin not allowed", http.StatusForbidden)
+				return
+			}
+			addCORSHeaders(w, cfg, allowedOrigin, r.Header.Get("Access-Control-Request-Headers"))
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
-		addCORSHeaders(w)
+		if allowedOrigin == "" {
+			log.Printf("[proxy] Request from disallowed origin: %s for %s", origin, r.URL.Path)
+			http.Error(w, "CORS origin not allowed", http.StatusForbidden)
+			return
+		}
+
+		// Add CORS headers to all responses
+		addCORSHeaders(w, cfg, allowedOrigin, "")
 
 		// Decide whether the request should go to the auth server or MCP
 		var targetURL *url.URL
 		isSSE := false
 
-		if authPaths[r.URL.Path] {
+		if isAuthPath(r.URL.Path) {
 			targetURL = authBase
 		} else if isMCPPath(r.URL.Path, cfg) {
-			// Validate JWT if you want
+			// Validate JWT for MCP paths if required
+			// Placeholder for JWT validation logic
 			if err := util.ValidateJWT(r.Header.Get("Authorization")); err != nil {
 				log.Printf("[proxy] Unauthorized request to %s: %v", r.URL.Path, err)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -100,9 +161,19 @@ func buildProxyHandler(cfg *config.Config) http.HandlerFunc {
 				isSSE = true
 			}
 		} else {
-			// If it's not recognized as an auth path or an MCP path
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
+		}
+
+		// Apply request modifiers to add parameters
+		if modifier, exists := modifiers[r.URL.Path]; exists {
+			var err error
+			r, err = modifier.ModifyRequest(r)
+			if err != nil {
+				log.Printf("[proxy] Error modifying request: %v", err)
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
 		}
 
 		// Build the reverse proxy
@@ -120,22 +191,26 @@ func buildProxyHandler(cfg *config.Config) http.HandlerFunc {
 				req.URL.RawQuery = r.URL.RawQuery
 				req.Host = targetURL.Host
 
-				for header, values := range r.Header {
+				cleanHeaders := http.Header{}
+
+				for k, v := range r.Header {
 					// Skip hop-by-hop headers
-					if strings.EqualFold(header, "Connection") ||
-						strings.EqualFold(header, "Keep-Alive") ||
-						strings.EqualFold(header, "Transfer-Encoding") ||
-						strings.EqualFold(header, "Upgrade") ||
-						strings.EqualFold(header, "Proxy-Authorization") ||
-						strings.EqualFold(header, "Proxy-Connection") {
+					if skipHeader(k) {
 						continue
 					}
 
-					for _, value := range values {
-						req.Header.Set(header, value)
-					}
+					// Set only the first value to avoid duplicates
+					cleanHeaders.Set(k, v[0])
 				}
+
+				req.Header = cleanHeaders
+
 				log.Printf("[proxy] %s -> %s%s", r.URL.Path, req.URL.Host, req.URL.Path)
+			},
+			ModifyResponse: func(resp *http.Response) error {
+				log.Printf("[proxy] Response from %s%s: %d", resp.Request.URL.Host, resp.Request.URL.Path, resp.StatusCode)
+				resp.Header.Del("Access-Control-Allow-Origin") // Avoid upstream conflicts
+				return nil
 			},
 			ErrorHandler: func(rw http.ResponseWriter, req *http.Request, err error) {
 				log.Printf("[proxy] Error proxying: %v", err)
@@ -156,13 +231,47 @@ func buildProxyHandler(cfg *config.Config) http.HandlerFunc {
 	}
 }
 
-func addCORSHeaders(w http.ResponseWriter) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("X-Accel-Buffering", "no")
+func getAllowedOrigin(origin string, cfg *config.Config) string {
+	if origin == "" {
+		return cfg.CORSConfig.AllowedOrigins[0] // Default to first allowed origin
+	}
+	for _, allowed := range cfg.CORSConfig.AllowedOrigins {
+		if allowed == origin {
+			return allowed
+		}
+	}
+	return ""
 }
 
+// addCORSHeaders adds configurable CORS headers
+func addCORSHeaders(w http.ResponseWriter, cfg *config.Config, allowedOrigin, requestHeaders string) {
+	w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join(cfg.CORSConfig.AllowedMethods, ", "))
+	if requestHeaders != "" {
+		w.Header().Set("Access-Control-Allow-Headers", requestHeaders)
+	} else {
+		w.Header().Set("Access-Control-Allow-Headers", strings.Join(cfg.CORSConfig.AllowedHeaders, ", "))
+	}
+	if cfg.CORSConfig.AllowCredentials {
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+	}
+	w.Header().Set("Vary", "Origin")
+}
+
+func isAuthPath(path string) bool {
+	authPaths := map[string]bool{
+		"/authorize": true,
+		"/token":     true,
+		"/register":  true,
+		"/.well-known/oauth-authorization-server": true,
+	}
+	if strings.HasPrefix(path, "/u/") {
+		return true
+	}
+	return authPaths[path]
+}
+
+// isMCPPath checks if the path is an MCP path
 func isMCPPath(path string, cfg *config.Config) bool {
 	for _, p := range cfg.MCPPaths {
 		if strings.HasPrefix(path, p) {
@@ -172,22 +281,10 @@ func isMCPPath(path string, cfg *config.Config) bool {
 	return false
 }
 
-func copyHeaders(src http.Header, dst http.Header) {
-	// Exclude hop-by-hop
-	hopByHop := map[string]bool{
-		"Connection":          true,
-		"Keep-Alive":          true,
-		"Transfer-Encoding":   true,
-		"Upgrade":             true,
-		"Proxy-Authorization": true,
-		"Proxy-Connection":    true,
+func skipHeader(h string) bool {
+	switch strings.ToLower(h) {
+	case "connection", "keep-alive", "transfer-encoding", "upgrade", "proxy-authorization", "proxy-connection", "te", "trailer":
+		return true
 	}
-	for k, vv := range src {
-		if hopByHop[strings.ToLower(k)] {
-			continue
-		}
-		for _, v := range vv {
-			dst.Add(k, v)
-		}
-	}
+	return false
 }

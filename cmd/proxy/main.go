@@ -11,12 +11,14 @@ import (
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
+	"github.com/wso2/open-mcp-auth-proxy/internal/constants"
 	"github.com/wso2/open-mcp-auth-proxy/internal/proxy"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
 
 func main() {
 	demoMode := flag.Bool("demo", false, "Use Asgardeo-based provider (demo).")
+	asgardeoMode := flag.Bool("asgardeo", false, "Use Asgardeo-based provider (asgardeo).")
 	flag.Parse()
 
 	// 1. Load config
@@ -28,12 +30,20 @@ func main() {
 	// 2. Create the chosen provider
 	var provider authz.Provider
 	if *demoMode {
-		cfg.AuthServerBaseURL = "https://api.asgardeo.io/t/" + cfg.Demo.OrgName + "/oauth2"
-		cfg.JWKSURL = "https://api.asgardeo.io/t/" + cfg.Demo.OrgName + "/oauth2/jwks"
+		cfg.Mode = "demo"
+		cfg.AuthServerBaseURL = constants.ASGARDEO_BASE_URL + cfg.Demo.OrgName + "/oauth2"
+		cfg.JWKSURL = constants.ASGARDEO_BASE_URL + cfg.Demo.OrgName + "/oauth2/jwks"
 		provider = authz.NewAsgardeoProvider(cfg)
-		fmt.Println("Using Asgardeo provider (demo).")
+	} else if *asgardeoMode {
+		cfg.Mode = "asgardeo"
+		cfg.AuthServerBaseURL = constants.ASGARDEO_BASE_URL + cfg.Asgardeo.OrgName + "/oauth2"
+		cfg.JWKSURL = constants.ASGARDEO_BASE_URL + cfg.Asgardeo.OrgName + "/oauth2/jwks"
+		provider = authz.NewAsgardeoProvider(cfg)
 	} else {
-		log.Fatalf("Not supported yet.")
+		cfg.Mode = "default"
+		cfg.JWKSURL = cfg.Default.JWKSURL
+		cfg.AuthServerBaseURL = cfg.Default.BaseURL
+		provider = authz.NewDefaultProvider(cfg)
 	}
 
 	// 3. (Optional) Fetch JWKS if you want local JWT validation
@@ -44,14 +54,17 @@ func main() {
 	// 4. Build the main router
 	mux := proxy.NewRouter(cfg, provider)
 
+	listen_address := fmt.Sprintf(":%d", cfg.ListenPort)
+
 	// 5. Start the server
 	srv := &http.Server{
-		Addr:    cfg.ListenAddress,
+
+		Addr:    listen_address,
 		Handler: mux,
 	}
 
 	go func() {
-		log.Printf("Server listening on %s", cfg.ListenAddress)
+		log.Printf("Server listening on %s", listen_address)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server error: %v", err)
 		}
