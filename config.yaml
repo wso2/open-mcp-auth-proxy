@@ -21,11 +21,6 @@ command:
   #   - "NODE_ENV=development"
 
 path_mapping:
-  # /token: /oauth/token
-  # /register: /oidc/register
-  # /authorize: /authorize
-  # /u/login: /u/login
-  # /.well-known/oauth-authorization-server: /.well-known/openid-configuration
 
 cors:
   allowed_origins:
@@ -44,40 +39,3 @@ demo:
   org_name: "openmcpauthdemo"
   client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
   client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"
-
-asgardeo:
-  org_name: "<org_name>"
-  client_id: "<client_id>"
-  client_secret: "<client_secret>"
-# default:
-#   base_url: "https://dev-mw4ipgsq1454jrwm.us.auth0.com"
-#   jwks_url: "https://dev-mw4ipgsq1454jrwm.us.auth0.com/.well-known/jwks.json"
-#   path:
-#     /.well-known/oauth-authorization-server:
-#       response:
-#         issuer: "https://dev-mw4ipgsq1454jrwm.us.auth0.com/"
-#         jwks_uri: "https://dev-mw4ipgsq1454jrwm.us.auth0.com/.well-known/jwks.json"
-#         authorization_endpoint: "https://dev-mw4ipgsq1454jrwm.us.auth0.com/authorize?audience=mcp_proxy"
-#         # token_endpoint: "https://dev-mw4ipgsq1454jrwm.us.auth0.com/oauth/token"
-#         # registration_endpoint: "https://dev-mw4ipgsq1454jrwm.us.auth0.com/oidc/register"
-#         response_types_supported:
-#           - "code"
-#         grant_types_supported:
-#           - "authorization_code"
-#           - "refresh_token"
-#         code_challenge_methods_supported:
-#           - "S256"
-#           - "plain"
-#     /authroize:
-#       addQueryParams:
-#         - name: "audience"
-#           value: "mcp_proxy"
-#     /token:
-#       addBodyParams:
-#         - name: "audience"
-#           value: "mcp_proxy"
-#     /register:
-#       addBodyParams:
-#         - name: "audience"
-#           value: "mcp_proxy"
-

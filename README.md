@@ -31,8 +31,27 @@ go build -o openmcpauthproxy ./cmd/proxy
 Allows you to just enable authentication and authorization for your MCP server with the preconfigured auth provider powered by Asgardeo.
 
 If you don’t have an MCP server, follow the instructions given here to start your own MCP server for testing purposes.
-1. Download [sample MCP server](resources/echo_server.py)
-2. Run the server with
+
+1. Navigate to `resources` directory.
+2. Initialize a virtual environment.
+
+```bash
+python3 -m venv .venv
+```
+3. Activate virtual environment.
+
+```bash
+source .venv/bin/activate
+```
+
+4. Install dependencies.
+
+```
+pip3 install -r requirements.txt
+```
+
+5. Start the server.
+
 ```bash
 python3 echo_server.py
 ```
@@ -58,7 +77,7 @@ The `--demo` flag enables a demonstration mode with pre-configured authenticatio
 
 #### Connect Using an MCP Client
 
-You can use this fork of the [MCP Inspector](https://github.com/shashimalcse/inspector) to test the connection and try out the complete authorization flow. (this is a temporary fork with fixes for authentication issues in the original implementation)
+You can use this fork of the [MCP Inspector](https://github.com/shashimalcse/inspector) to test the connection and try out the complete authorization flow. (This is a temporary fork with fixes for authentication [issues](https://github.com/modelcontextprotocol/typescript-sdk/issues/257) in the original implementation)
 
 ### Use with Asgardeo
 
