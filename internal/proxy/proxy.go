@@ -191,8 +191,20 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 				req.URL.RawQuery = r.URL.RawQuery
 				req.Host = targetURL.Host
 
+				// for key, values := range r.Header {
+				// 	log.Printf("Header: %s, Values: %v", key, values)
+				// }
+
 				cleanHeaders := http.Header{}
 
+				// Preserve the original Origin header if present
+				// if origin := r.Header.Get("Origin"); origin != "" {
+				// 	cleanHeaders.Set("Origin", origin)
+				// } else {
+				// 	log.Printf("[proxy] No Origin header found, setting to target URL: http://localhost:8080")
+				// 	cleanHeaders.Set("Origin", "http://localhost:8080")
+				// }
+				
 				for k, v := range r.Header {
 					// Skip hop-by-hop headers
 					if skipHeader(k) {
@@ -236,6 +248,7 @@ func getAllowedOrigin(origin string, cfg *config.Config) string {
 		return cfg.CORSConfig.AllowedOrigins[0] // Default to first allowed origin
 	}
 	for _, allowed := range cfg.CORSConfig.AllowedOrigins {
+		log.Printf("[proxy] Checking CORS origin: %s against allowed: %s", origin, allowed)
 		if allowed == origin {
 			return allowed
 		}
@@ -256,6 +269,7 @@ func addCORSHeaders(w http.ResponseWriter, cfg *config.Config, allowedOrigin, re
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 	}
 	w.Header().Set("Vary", "Origin")
+	w.Header().Set("X-Accel-Buffering", "no")
 }
 
 func isAuthPath(path string) bool {

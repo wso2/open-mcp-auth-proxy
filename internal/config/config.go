@@ -2,7 +2,7 @@ package config
 
 import (
 	"os"
-
+	"fmt"
 	"gopkg.in/yaml.v2"
 )
 
@@ -74,6 +74,62 @@ type Config struct {
 	Demo     DemoConfig     `yaml:"demo"`
 	Asgardeo AsgardeoConfig `yaml:"asgardeo"`
 	Default  DefaultConfig  `yaml:"default"`
+	Command Command        `yaml:"command"` // Command to run
+}
+
+// Command struct with explicit configuration for all relevant paths
+type Command struct {
+	Enabled     bool     `yaml:"enabled"`
+	UserCommand string   `yaml:"user_command"` // Only the part provided by the user
+	BaseUrl     string   `yaml:"base_url"`     // Base URL for the MCP server
+	Port        int      `yaml:"port"`         // Port for the MCP server
+	SsePath     string   `yaml:"sse_path"`     // SSE endpoint path
+	MessagePath string   `yaml:"message_path"` // Messages endpoint path
+	WorkDir     string   `yaml:"work_dir"`     // Working directory
+	Args        []string `yaml:"args,omitempty"` // Additional arguments
+	Env         []string `yaml:"env,omitempty"`  // Environment variables
+}
+
+// BuildExecCommand constructs the full command string for execution
+func (c *Command) BuildExecCommand() string {
+	if c.UserCommand == "" {
+		return ""
+	}
+
+	// Apply defaults if not specified
+	port := c.Port
+	if port == 0 {
+		port = 8000
+	}
+
+	baseUrl := c.BaseUrl
+	if baseUrl == "" {
+		baseUrl = fmt.Sprintf("http://localhost:%d", port)
+	}
+
+	ssePath := c.SsePath
+	if ssePath == "" {
+		ssePath = "/sse"
+	}
+
+	messagePath := c.MessagePath
+	if messagePath == "" {
+		messagePath = "/messages"
+	}
+
+	// Construct the full command
+	return fmt.Sprintf(
+		`npx -y supergateway --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
+		c.UserCommand, port, baseUrl, ssePath, messagePath,
+	)
+}
+
+// GetExec returns the complete command string for execution
+func (c *Command) GetExec() string {
+	if c.UserCommand == "" {
+		return ""
+	}
+	return c.BuildExecCommand()
 }
 
 // LoadConfig reads a YAML config file into Config struct.
