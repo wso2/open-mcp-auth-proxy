@@ -38,14 +38,19 @@ If you don’t have an MCP server, follow the instructions given here to start y
 ```bash
 python3 -m venv .venv
 ```
+3. Activate virtual environment.
 
-3. Install dependencies.
+```bash
+source .venv/bin/activate
+```
+
+4. Install dependencies.
 
 ```
 pip3 install -r requirements.txt
 ```
 
-4. Start the server.
+5. Start the server.
 
 ```bash
 python3 echo_server.py
