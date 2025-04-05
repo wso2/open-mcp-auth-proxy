@@ -13,6 +13,7 @@ import (
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
 	"github.com/wso2/open-mcp-auth-proxy/internal/constants"
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging" 
 	"github.com/wso2/open-mcp-auth-proxy/internal/proxy"
 	"github.com/wso2/open-mcp-auth-proxy/internal/subprocess"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
@@ -21,7 +22,10 @@ import (
 func main() {
 	demoMode := flag.Bool("demo", false, "Use Asgardeo-based provider (demo).")
 	asgardeoMode := flag.Bool("asgardeo", false, "Use Asgardeo-based provider (asgardeo).")
+	debugMode := flag.Bool("debug", false, "Enable debug logging")
 	flag.Parse()
+
+	logger.SetDebug(*debugMode)
 
 	// 1. Load config
 	cfg, err := config.LoadConfig("config.yaml")
@@ -64,6 +68,12 @@ func main() {
 	// 3. Start subprocess if configured
 	var procManager *subprocess.Manager
 	if cfg.Command.Enabled && cfg.Command.UserCommand != "" {
+		// Ensure all required dependencies are available
+		if err := subprocess.EnsureDependenciesAvailable(cfg.Command.UserCommand); err != nil {
+			log.Printf("Warning: %v", err)
+			log.Printf("Subprocess may fail to start due to missing dependencies")
+		}
+    
 		procManager = subprocess.NewManager()
 		if err := procManager.Start(&cfg.Command); err != nil {
 			log.Printf("Warning: Failed to start subprocess: %v", err)
