@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 type asgardeoProvider struct {
@@ -73,7 +73,7 @@ func (p *asgardeoProvider) WellKnownHandler() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Accel-Buffering", "no")
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			log.Printf("[asgardeoProvider] Error encoding well-known: %v", err)
+			logger.Error("Error encoding well-known: %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 		}
 	}
@@ -98,7 +98,7 @@ func (p *asgardeoProvider) RegisterHandler() http.HandlerFunc {
 
 		var regReq RegisterRequest
 		if err := json.NewDecoder(r.Body).Decode(&regReq); err != nil {
-			log.Printf("ERROR: reading register request: %v", err)
+			logger.Error("Reading register request: %v", err)
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -112,7 +112,7 @@ func (p *asgardeoProvider) RegisterHandler() http.HandlerFunc {
 		regReq.ClientSecret = randomString(16)
 
 		if err := p.createAsgardeoApplication(regReq); err != nil {
-			log.Printf("WARN: Asgardeo application creation failed: %v", err)
+			logger.Warn("Asgardeo application creation failed: %v", err)
 			// Optionally http.Error(...) if you want to fail
 			// or continue to return partial data.
 		}
@@ -130,7 +130,7 @@ func (p *asgardeoProvider) RegisterHandler() http.HandlerFunc {
 		w.Header().Set("X-Accel-Buffering", "no")
 		w.WriteHeader(http.StatusCreated)
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			log.Printf("ERROR: encoding /register response: %v", err)
+			logger.Error("Encoding /register response: %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 		}
 	}
@@ -190,7 +190,7 @@ func (p *asgardeoProvider) createAsgardeoApplication(regReq RegisterRequest) err
 		return fmt.Errorf("Asgardeo creation error (%d): %s", resp.StatusCode, string(respBody))
 	}
 
-	log.Printf("INFO: Created Asgardeo application for clientID=%s", regReq.ClientID)
+	logger.Info("Created Asgardeo application for clientID=%s", regReq.ClientID)
 	return nil
 }
 
@@ -206,8 +206,11 @@ func (p *asgardeoProvider) getAsgardeoAdminToken() (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
+	// Sensitive data - should not be logged at INFO level
 	auth := p.cfg.Demo.ClientID + ":" + p.cfg.Demo.ClientSecret
 	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
+	
+	logger.Debug("Requesting admin token for Asgardeo with client ID: %s", p.cfg.Demo.ClientID)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -237,6 +240,10 @@ func (p *asgardeoProvider) getAsgardeoAdminToken() (string, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
 		return "", fmt.Errorf("failed to parse token JSON: %w", err)
 	}
+
+	// Don't log the actual token at info level, only at debug level
+	logger.Debug("Received access token: %s", tokenResp.AccessToken)
+	logger.Info("Successfully obtained admin token from Asgardeo")
 
 	return tokenResp.AccessToken, nil
 }

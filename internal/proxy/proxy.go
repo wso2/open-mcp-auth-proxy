@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
 
@@ -102,11 +102,13 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 	// Parse the base URLs up front
 	authBase, err := url.Parse(cfg.AuthServerBaseURL)
 	if err != nil {
-		log.Fatalf("Invalid auth server URL: %v", err)
+		logger.Error("Invalid auth server URL: %v", err)
+		panic(err) // Fatal error that prevents startup
 	}
 	mcpBase, err := url.Parse(cfg.MCPServerBaseURL)
 	if err != nil {
-		log.Fatalf("Invalid MCP server URL: %v", err)
+		logger.Error("Invalid MCP server URL: %v", err)
+		panic(err) // Fatal error that prevents startup
 	}
 
 	// Detect SSE paths from config
@@ -123,7 +125,7 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 		// Handle OPTIONS
 		if r.Method == http.MethodOptions {
 			if allowedOrigin == "" {
-				log.Printf("[proxy] Preflight request from disallowed origin: %s", origin)
+				logger.Warn("Preflight request from disallowed origin: %s", origin)
 				http.Error(w, "CORS origin not allowed", http.StatusForbidden)
 				return
 			}
@@ -133,7 +135,7 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 		}
 
 		if allowedOrigin == "" {
-			log.Printf("[proxy] Request from disallowed origin: %s for %s", origin, r.URL.Path)
+			logger.Warn("Request from disallowed origin: %s for %s", origin, r.URL.Path)
 			http.Error(w, "CORS origin not allowed", http.StatusForbidden)
 			return
 		}
@@ -151,7 +153,7 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 			// Validate JWT for MCP paths if required
 			// Placeholder for JWT validation logic
 			if err := util.ValidateJWT(r.Header.Get("Authorization")); err != nil {
-				log.Printf("[proxy] Unauthorized request to %s: %v", r.URL.Path, err)
+				logger.Warn("Unauthorized request to %s: %v", r.URL.Path, err)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
@@ -169,7 +171,7 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 			var err error
 			r, err = modifier.ModifyRequest(r)
 			if err != nil {
-				log.Printf("[proxy] Error modifying request: %v", err)
+				logger.Error("Error modifying request: %v", err)
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
@@ -210,15 +212,15 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 
 				req.Header = cleanHeaders
 
-				log.Printf("[proxy] %s -> %s%s", r.URL.Path, req.URL.Host, req.URL.Path)
+				logger.Debug("%s -> %s%s", r.URL.Path, req.URL.Host, req.URL.Path)
 			},
 			ModifyResponse: func(resp *http.Response) error {
-				log.Printf("[proxy] Response from %s%s: %d", resp.Request.URL.Host, resp.Request.URL.Path, resp.StatusCode)
+				logger.Debug("Response from %s%s: %d", resp.Request.URL.Host, resp.Request.URL.Path, resp.StatusCode)
 				resp.Header.Del("Access-Control-Allow-Origin") // Avoid upstream conflicts
 				return nil
 			},
 			ErrorHandler: func(rw http.ResponseWriter, req *http.Request, err error) {
-				log.Printf("[proxy] Error proxying: %v", err)
+				logger.Error("Error proxying: %v", err)
 				http.Error(rw, "Bad Gateway", http.StatusBadGateway)
 			},
 			FlushInterval: -1, // immediate flush for SSE
@@ -253,7 +255,7 @@ func getAllowedOrigin(origin string, cfg *config.Config) string {
 		return cfg.CORSConfig.AllowedOrigins[0] // Default to first allowed origin
 	}
 	for _, allowed := range cfg.CORSConfig.AllowedOrigins {
-		log.Printf("[proxy] Checking CORS origin: %s against allowed: %s", origin, allowed)
+		logger.Debug("Checking CORS origin: %s against allowed: %s", origin, allowed)
 		if allowed == origin {
 			return allowed
 		}

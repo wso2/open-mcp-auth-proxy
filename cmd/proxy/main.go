@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,7 +12,7 @@ import (
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
 	"github.com/wso2/open-mcp-auth-proxy/internal/constants"
-	"github.com/wso2/open-mcp-auth-proxy/internal/logging" 
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 	"github.com/wso2/open-mcp-auth-proxy/internal/proxy"
 	"github.com/wso2/open-mcp-auth-proxy/internal/subprocess"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
@@ -30,7 +29,8 @@ func main() {
 	// 1. Load config
 	cfg, err := config.LoadConfig("config.yaml")
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		logger.Error("Error loading config: %v", err)
+		os.Exit(1)
 	}
 
 	// 2. Ensure MCPPaths includes the configured paths from the command
@@ -60,9 +60,7 @@ func main() {
 			}
 		}
 		
-		// Add the baseUrl to allowed origins if not already present
-		// ensureOriginInList(&cfg.CORSConfig.AllowedOrigins, "http://localhost:8080")
-		log.Printf("Using MCP server baseUrl: %s", baseUrl)
+		logger.Info("Using MCP server baseUrl: %s", baseUrl)
 	}
 
 	// 3. Start subprocess if configured
@@ -70,13 +68,13 @@ func main() {
 	if cfg.Command.Enabled && cfg.Command.UserCommand != "" {
 		// Ensure all required dependencies are available
 		if err := subprocess.EnsureDependenciesAvailable(cfg.Command.UserCommand); err != nil {
-			log.Printf("Warning: %v", err)
-			log.Printf("Subprocess may fail to start due to missing dependencies")
+			logger.Warn("%v", err)
+			logger.Warn("Subprocess may fail to start due to missing dependencies")
 		}
     
 		procManager = subprocess.NewManager()
 		if err := procManager.Start(&cfg.Command); err != nil {
-			log.Printf("Warning: Failed to start subprocess: %v", err)
+			logger.Warn("Failed to start subprocess: %v", err)
 		}
 	}
 
@@ -101,7 +99,8 @@ func main() {
 
 	// 5. (Optional) Fetch JWKS if you want local JWT validation
 	if err := util.FetchJWKS(cfg.JWKSURL); err != nil {
-		log.Fatalf("Failed to fetch JWKS: %v", err)
+		logger.Error("Failed to fetch JWKS: %v", err)
+		os.Exit(1)
 	}
 
 	// 6. Build the main router
@@ -116,9 +115,10 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("Server listening on %s", listen_address)
+		logger.Info("Server listening on %s", listen_address)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			logger.Error("Server error: %v", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -126,7 +126,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop
-	log.Println("Shutting down...")
+	logger.Info("Shutting down...")
 
 	// 9. First terminate subprocess if running
 	if procManager != nil && procManager.IsRunning() {
@@ -134,14 +134,14 @@ func main() {
 	}
 
 	// 10. Then shutdown the server
-	log.Println("Shutting down HTTP server...")
+	logger.Info("Shutting down HTTP server...")
 	shutdownCtx, cancel := proxy.NewShutdownContext(5 * time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("HTTP server shutdown error: %v", err)
+		logger.Error("HTTP server shutdown error: %v", err)
 	}
-	log.Println("Stopped.")
+	logger.Info("Stopped.")
 }
 
 // Helper function to ensure a path is in a list
@@ -154,7 +154,7 @@ func ensurePathInList(paths *[]string, path string) {
 	}
 	// Path doesn't exist, add it
 	*paths = append(*paths, path)
-	log.Printf("Added path %s to MCPPaths", path)
+	logger.Info("Added path %s to MCPPaths", path)
 }
 
 // Helper function to ensure an origin is in a list
@@ -167,5 +167,5 @@ func ensureOriginInList(origins *[]string, origin string) {
 	}
 	// Origin doesn't exist, add it
 	*origins = append(*origins, origin)
-	log.Printf("Added %s to allowed CORS origins", origin)
+	logger.Info("Added %s to allowed CORS origins", origin)
 }

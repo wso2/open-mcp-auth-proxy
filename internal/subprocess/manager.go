@@ -1,16 +1,16 @@
 package subprocess
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"os/exec"
 	"sync"
 	"syscall"
 	"time"
-	"fmt"
 	"strings"
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 // Manager handles starting and graceful shutdown of subprocesses
@@ -39,7 +39,7 @@ func EnsureDependenciesAvailable(command string) error {
         }
         
         // Try to install npx using npm
-        log.Printf("npx not found, attempting to install...")
+        logger.Info("npx not found, attempting to install...")
         cmd := exec.Command("npm", "install", "-g", "npx")
         cmd.Stdout = os.Stdout
         cmd.Stderr = os.Stderr
@@ -48,7 +48,7 @@ func EnsureDependenciesAvailable(command string) error {
             return fmt.Errorf("failed to install npx: %w", err)
         }
         
-        log.Printf("npx installed successfully")
+        logger.Info("npx installed successfully")
     }
     
     // Check if uv is needed based on the command
@@ -86,7 +86,7 @@ func (m *Manager) Start(cmdConfig *config.Command) error {
 		return nil // No command to execute
 	}
 
-	log.Printf("Starting subprocess with command: %s", execCommand)
+	logger.Info("Starting subprocess with command: %s", execCommand)
 
 	// Use the shell to execute the command
 	cmd := exec.Command("sh", "-c", execCommand)
@@ -115,24 +115,24 @@ func (m *Manager) Start(cmdConfig *config.Command) error {
 
 	m.process = cmd.Process
 	m.cmd = cmd
-	log.Printf("Subprocess started with PID: %d", m.process.Pid)
+	logger.Info("Subprocess started with PID: %d", m.process.Pid)
 
 	// Get and store the process group ID
 	pgid, err := syscall.Getpgid(m.process.Pid)
 	if err == nil {
 		m.processGroup = pgid
-		log.Printf("Process group ID: %d", m.processGroup)
+		logger.Debug("Process group ID: %d", m.processGroup)
 	} else {
-		log.Printf("Warning: Failed to get process group ID: %v", err)
+		logger.Warn("Failed to get process group ID: %v", err)
 		m.processGroup = m.process.Pid
 	}
 
 	// Handle process termination in background
 	go func() {
 		if err := cmd.Wait(); err != nil {
-			log.Printf("Subprocess exited with error: %v", err)
+			logger.Error("Subprocess exited with error: %v", err)
 		} else {
-			log.Printf("Subprocess exited successfully")
+			logger.Info("Subprocess exited successfully")
 		}
 
 		// Clear the process reference when it exits
@@ -163,7 +163,7 @@ func (m *Manager) Shutdown() {
 		return // No process to terminate
 	}
 
-	log.Println("Terminating subprocess...")
+	logger.Info("Terminating subprocess...")
 	terminateComplete := make(chan struct{})
 
 	go func() {
@@ -176,14 +176,14 @@ func (m *Manager) Shutdown() {
 		if processGroupToTerminate != 0 {
 			err := syscall.Kill(-processGroupToTerminate, syscall.SIGTERM)
 			if err != nil {
-				log.Printf("Failed to send SIGTERM to process group: %v", err)
+				logger.Warn("Failed to send SIGTERM to process group: %v", err)
 
 				// Fallback to terminating just the process
 				m.mutex.Lock()
 				if m.process != nil {
 					err = m.process.Signal(syscall.SIGTERM)
 					if err != nil {
-						log.Printf("Failed to send SIGTERM to process: %v", err)
+						logger.Warn("Failed to send SIGTERM to process: %v", err)
 					}
 				}
 				m.mutex.Unlock()
@@ -194,7 +194,7 @@ func (m *Manager) Shutdown() {
 			if m.process != nil {
 				err := m.process.Signal(syscall.SIGTERM)
 				if err != nil {
-					log.Printf("Failed to send SIGTERM to process: %v", err)
+					logger.Warn("Failed to send SIGTERM to process: %v", err)
 				}
 			}
 			m.mutex.Unlock()
@@ -214,23 +214,23 @@ func (m *Manager) Shutdown() {
 		}
 
 		if terminatedGracefully {
-			log.Println("Subprocess terminated gracefully")
+			logger.Info("Subprocess terminated gracefully")
 			return
 		}
 
 		// If the process didn't exit gracefully, force kill
-		log.Println("Subprocess didn't exit gracefully, forcing termination...")
+		logger.Warn("Subprocess didn't exit gracefully, forcing termination...")
 
 		// Try to kill the process group first
 		if processGroupToTerminate != 0 {
 			if err := syscall.Kill(-processGroupToTerminate, syscall.SIGKILL); err != nil {
-				log.Printf("Failed to send SIGKILL to process group: %v", err)
+				logger.Warn("Failed to send SIGKILL to process group: %v", err)
 
 				// Fallback to killing just the process
 				m.mutex.Lock()
 				if m.process != nil {
 					if err := m.process.Kill(); err != nil {
-						log.Printf("Failed to kill process: %v", err)
+						logger.Error("Failed to kill process: %v", err)
 					}
 				}
 				m.mutex.Unlock()
@@ -240,7 +240,7 @@ func (m *Manager) Shutdown() {
 			m.mutex.Lock()
 			if m.process != nil {
 				if err := m.process.Kill(); err != nil {
-					log.Printf("Failed to kill process: %v", err)
+					logger.Error("Failed to kill process: %v", err)
 				}
 			}
 			m.mutex.Unlock()
@@ -251,9 +251,9 @@ func (m *Manager) Shutdown() {
 
 		m.mutex.Lock()
 		if m.process == nil {
-			log.Println("Subprocess terminated by force")
+			logger.Info("Subprocess terminated by force")
 		} else {
-			log.Println("Warning: Failed to terminate subprocess")
+			logger.Warn("Failed to terminate subprocess")
 		}
 		m.mutex.Unlock()
 	}()
@@ -263,6 +263,6 @@ func (m *Manager) Shutdown() {
 	case <-terminateComplete:
 		// Termination completed
 	case <-time.After(m.shutdownDelay):
-		log.Println("Warning: Subprocess termination timed out")
+		logger.Warn("Subprocess termination timed out")
 	}
 }

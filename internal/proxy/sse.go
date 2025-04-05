@@ -5,11 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"strings"
 	"time"
+	
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 // HandleSSE sets up a go-routine to wait for context cancellation
@@ -20,7 +21,7 @@ func HandleSSE(w http.ResponseWriter, r *http.Request, rp *httputil.ReverseProxy
 
 	go func() {
 		<-ctx.Done()
-		log.Printf("INFO: SSE connection closed from %s (path: %s)", r.RemoteAddr, r.URL.Path)
+		logger.Info("SSE connection closed from %s (path: %s)", r.RemoteAddr, r.URL.Path)
 		close(done)
 	}()
 
@@ -57,7 +58,7 @@ func (t *sseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return resp, nil
 	}
 	
-	log.Printf("INFO: Intercepting SSE response to modify endpoint events")
+	logger.Info("Intercepting SSE response to modify endpoint events")
 	
 	// Create a response wrapper that modifies the response body
 	originalBody := resp.Body
@@ -81,9 +82,9 @@ func (t *sseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 						endpoint := strings.TrimPrefix(dataLine, "data: ")
 						
 						// Replace the host in the endpoint
-						log.Printf("DEBUG: Original endpoint: %s", endpoint)
+						logger.Debug("Original endpoint: %s", endpoint)
 						endpoint = strings.Replace(endpoint, t.targetHost, t.proxyHost, 1)
-						log.Printf("DEBUG: Modified endpoint: %s", endpoint)
+						logger.Debug("Modified endpoint: %s", endpoint)
 						
 						// Write the modified event lines
 						fmt.Fprintln(pw, line)
@@ -98,7 +99,7 @@ func (t *sseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 		
 		if err := scanner.Err(); err != nil {
-			log.Printf("Error reading SSE stream: %v", err)
+			logger.Error("Error reading SSE stream: %v", err)
 		}
 	}()
 	
