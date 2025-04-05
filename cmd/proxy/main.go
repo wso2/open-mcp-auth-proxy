@@ -22,6 +22,7 @@ func main() {
 	demoMode := flag.Bool("demo", false, "Use Asgardeo-based provider (demo).")
 	asgardeoMode := flag.Bool("asgardeo", false, "Use Asgardeo-based provider (asgardeo).")
 	debugMode := flag.Bool("debug", false, "Enable debug logging")
+	stdioMode := flag.Bool("stdio", false, "Use stdio transport mode instead of SSE")
 	flag.Parse()
 
 	logger.SetDebug(*debugMode)
@@ -33,39 +34,31 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 2. Ensure MCPPaths includes the configured paths from the command
-	if cfg.Command.Enabled {
-		// Add SSE path to MCPPaths if not already present
-		ssePath := cfg.Command.SsePath
-		if ssePath == "" {
-			ssePath = "/sse" // default
+	// Override transport mode if stdio flag is set
+	if *stdioMode {
+		cfg.TransportMode = config.StdioTransport
+		// Validate command config for stdio mode
+		if err := cfg.Command.Validate(cfg.TransportMode); err != nil {
+			logger.Error("Configuration error: %v", err)
+			os.Exit(1)
 		}
-		
-		messagePath := cfg.Command.MessagePath
-		if messagePath == "" {
-			messagePath = "/messages" // default
-		}
-		
-		// Make sure paths are in MCPPaths
-		ensurePathInList(&cfg.MCPPaths, ssePath)
-		ensurePathInList(&cfg.MCPPaths, messagePath)
-		
-		// Configure baseUrl
-		baseUrl := cfg.Command.BaseUrl
-		if baseUrl == "" {
-			if cfg.Command.Port > 0 {
-				baseUrl = fmt.Sprintf("http://localhost:%d", cfg.Command.Port)
-			} else {
-				baseUrl = "http://localhost:8000" // default
-			}
-		}
-		
-		logger.Info("Using MCP server baseUrl: %s", baseUrl)
 	}
 
-	// 3. Start subprocess if configured
+	// 2. Ensure MCPPaths are properly configured
+	if cfg.TransportMode == config.StdioTransport && cfg.Command.Enabled {
+		// Use command.base_url for MCPServerBaseURL in stdio mode
+		cfg.MCPServerBaseURL = cfg.Command.GetBaseURL()
+		
+		// Use command paths for MCPPaths in stdio mode
+		cfg.MCPPaths = cfg.Command.GetPaths()
+		
+		logger.Info("Using MCP server baseUrl: %s", cfg.MCPServerBaseURL)
+		logger.Info("Using MCP paths: %v", cfg.MCPPaths)
+	}
+
+	// 3. Start subprocess if configured and in stdio mode
 	var procManager *subprocess.Manager
-	if cfg.Command.Enabled && cfg.Command.UserCommand != "" {
+	if cfg.TransportMode == config.StdioTransport && cfg.Command.Enabled && cfg.Command.UserCommand != "" {
 		// Ensure all required dependencies are available
 		if err := subprocess.EnsureDependenciesAvailable(cfg.Command.UserCommand); err != nil {
 			logger.Warn("%v", err)
@@ -76,6 +69,8 @@ func main() {
 		if err := procManager.Start(&cfg.Command); err != nil {
 			logger.Warn("Failed to start subprocess: %v", err)
 		}
+	} else if cfg.TransportMode == config.SSETransport {
+		logger.Info("Using SSE transport mode, not starting subprocess")
 	}
 
 	// 4. Create the chosen provider

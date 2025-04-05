@@ -1,9 +1,18 @@
 package config
 
 import (
-	"os"
 	"fmt"
+	"os"
+
 	"gopkg.in/yaml.v2"
+)
+
+// Transport mode for MCP server
+type TransportMode string
+
+const (
+	SSETransport   TransportMode = "sse"
+	StdioTransport TransportMode = "stdio"
 )
 
 // AsgardeoConfig groups all Asgardeo-specific fields
@@ -60,21 +69,22 @@ type DefaultConfig struct {
 }
 
 type Config struct {
-	AuthServerBaseURL string
-	MCPServerBaseURL  string `yaml:"mcp_server_base_url"`
-	ListenPort        int    `yaml:"listen_port"`
-	JWKSURL           string
-	TimeoutSeconds    int               `yaml:"timeout_seconds"`
-	MCPPaths          []string          `yaml:"mcp_paths"`
-	PathMapping       map[string]string `yaml:"path_mapping"`
-	Mode              string            `yaml:"mode"`
-	CORSConfig        CORSConfig        `yaml:"cors"`
+	AuthServerBaseURL  string
+	MCPServerBaseURL   string       `yaml:"mcp_server_base_url"`
+	ListenPort         int          `yaml:"listen_port"`
+	JWKSURL            string
+	TimeoutSeconds     int               `yaml:"timeout_seconds"`
+	MCPPaths           []string          `yaml:"mcp_paths"`
+	PathMapping        map[string]string `yaml:"path_mapping"`
+	Mode               string            `yaml:"mode"`
+	CORSConfig         CORSConfig        `yaml:"cors"`
+	TransportMode      TransportMode     `yaml:"transport_mode"`
 
 	// Nested config for Asgardeo
 	Demo     DemoConfig     `yaml:"demo"`
 	Asgardeo AsgardeoConfig `yaml:"asgardeo"`
 	Default  DefaultConfig  `yaml:"default"`
-	Command Command        `yaml:"command"` // Command to run
+	Command  Command        `yaml:"command"` // Command to run
 }
 
 // Command struct with explicit configuration for all relevant paths
@@ -88,6 +98,51 @@ type Command struct {
 	WorkDir     string   `yaml:"work_dir"`     // Working directory
 	Args        []string `yaml:"args,omitempty"` // Additional arguments
 	Env         []string `yaml:"env,omitempty"`  // Environment variables
+}
+
+// Validate checks if the command config is valid based on transport mode
+func (c *Command) Validate(transportMode TransportMode) error {
+	if transportMode == StdioTransport {
+		if !c.Enabled {
+			return fmt.Errorf("command must be enabled in stdio transport mode")
+		}
+		if c.UserCommand == "" {
+			return fmt.Errorf("user_command is required in stdio transport mode")
+		}
+	}
+	return nil
+}
+
+// GetBaseURL returns the base URL for the MCP server
+func (c *Command) GetBaseURL() string {
+	if c.BaseUrl != "" {
+		return c.BaseUrl
+	}
+	if c.Port > 0 {
+		return fmt.Sprintf("http://localhost:%d", c.Port)
+	}
+	return "http://localhost:8000" // default
+}
+
+// GetPaths returns the SSE and message paths
+func (c *Command) GetPaths() []string {
+	var paths []string
+	
+	// Add SSE path
+	ssePath := c.SsePath
+	if ssePath == "" {
+		ssePath = "/sse" // default
+	}
+	paths = append(paths, ssePath)
+	
+	// Add message path
+	messagePath := c.MessagePath
+	if messagePath == "" {
+		messagePath = "/messages" // default
+	}
+	paths = append(paths, messagePath)
+	
+	return paths
 }
 
 // BuildExecCommand constructs the full command string for execution
@@ -148,5 +203,31 @@ func LoadConfig(path string) (*Config, error) {
 	if cfg.TimeoutSeconds == 0 {
 		cfg.TimeoutSeconds = 15 // default
 	}
+	
+	// Set default transport mode if not specified
+	if cfg.TransportMode == "" {
+		cfg.TransportMode = SSETransport // Default to SSE
+	}
+	
+	// Validate command config based on transport mode
+	if err := cfg.Command.Validate(cfg.TransportMode); err != nil {
+		return nil, err
+	}
+	
+	// In stdio mode, use command.base_url for MCPServerBaseURL if it's not explicitly set
+	if cfg.TransportMode == StdioTransport && cfg.MCPServerBaseURL == "" {
+		cfg.MCPServerBaseURL = cfg.Command.GetBaseURL()
+	} else if cfg.TransportMode == SSETransport && cfg.MCPServerBaseURL == "" {
+		return nil, fmt.Errorf("mcp_server_base_url is required in SSE transport mode")
+	}
+	
+	// In stdio mode, set the MCPPaths from the command configuration
+	if cfg.TransportMode == StdioTransport && cfg.Command.Enabled {
+		// Override MCPPaths with paths from command configuration
+		cfg.MCPPaths = cfg.Command.GetPaths()
+	} else if cfg.TransportMode == SSETransport && len(cfg.MCPPaths) == 0 {
+		return nil, fmt.Errorf("mcp_paths are required in SSE transport mode")
+	}
+	
 	return &cfg, nil
 }

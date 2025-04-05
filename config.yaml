@@ -1,10 +1,13 @@
 # config.yaml
 
+transport_mode: "stdio" # Options: "sse" or "stdio"
+
+# For SSE mode, mcp_server_base_url and mcp_paths are required
+# For stdio mode, both are optional and will be derived from command configuration if not specified
 mcp_server_base_url: "http://localhost:8000"
 listen_port: 8080
 timeout_seconds: 10
-
-mcp_paths:
+mcp_paths: # Required in SSE mode, ignored in stdio mode (derived from command)
   - /messages/
   - /sse
 
