@@ -66,8 +66,8 @@ func (m *Manager) SetShutdownDelay(duration time.Duration) {
 	m.shutdownDelay = duration
 }
 
-// Start launches a subprocess based on the command configuration
-func (m *Manager) Start(cmdConfig *config.Command) error {
+// Start launches a subprocess based on the configuration
+func (m *Manager) Start(cfg *config.Config) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -76,12 +76,12 @@ func (m *Manager) Start(cmdConfig *config.Command) error {
 		return os.ErrExist
 	}
 
-	if !cmdConfig.Enabled || cmdConfig.UserCommand == "" {
+	if !cfg.Stdio.Enabled || cfg.Stdio.UserCommand == "" {
 		return nil // Nothing to start
 	}
 
 	// Get the full command string
-	execCommand := cmdConfig.GetExec()
+	execCommand := cfg.BuildExecCommand()
 	if execCommand == "" {
 		return nil // No command to execute
 	}
@@ -92,13 +92,13 @@ func (m *Manager) Start(cmdConfig *config.Command) error {
 	cmd := exec.Command("sh", "-c", execCommand)
 
 	// Set working directory if specified
-	if cmdConfig.WorkDir != "" {
-		cmd.Dir = cmdConfig.WorkDir
+	if cfg.Stdio.WorkDir != "" {
+		cmd.Dir = cfg.Stdio.WorkDir
 	}
 
 	// Set environment variables if specified
-	if len(cmdConfig.Env) > 0 {
-		cmd.Env = append(os.Environ(), cmdConfig.Env...)
+	if len(cfg.Stdio.Env) > 0 {
+		cmd.Env = append(os.Environ(), cfg.Stdio.Env...)
 	}
 
 	// Capture stdout/stderr

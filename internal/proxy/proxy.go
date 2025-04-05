@@ -82,7 +82,8 @@ func NewRouter(cfg *config.Config, provider authz.Provider) http.Handler {
 	}
 
 	// MCP paths
-	for _, path := range cfg.MCPPaths {
+	mcpPaths := cfg.GetMCPPaths()
+	for _, path := range mcpPaths {
 		mux.HandleFunc(path, buildProxyHandler(cfg, modifiers))
 		registeredPaths[path] = true
 	}
@@ -105,7 +106,8 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 		logger.Error("Invalid auth server URL: %v", err)
 		panic(err) // Fatal error that prevents startup
 	}
-	mcpBase, err := url.Parse(cfg.MCPServerBaseURL)
+	
+	mcpBase, err := url.Parse(cfg.BaseURL)
 	if err != nil {
 		logger.Error("Invalid MCP server URL: %v", err)
 		panic(err) // Fatal error that prevents startup
@@ -113,11 +115,7 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 
 	// Detect SSE paths from config
 	ssePaths := make(map[string]bool)
-	for _, p := range cfg.MCPPaths {
-		if p == "/sse" {
-			ssePaths[p] = true
-		}
-	}
+	ssePaths[cfg.Paths.SSE] = true
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
@@ -294,7 +292,8 @@ func isAuthPath(path string) bool {
 
 // isMCPPath checks if the path is an MCP path
 func isMCPPath(path string, cfg *config.Config) bool {
-	for _, p := range cfg.MCPPaths {
+	mcpPaths := cfg.GetMCPPaths()
+	for _, p := range mcpPaths {
 		if strings.HasPrefix(path, p) {
 			return true
 		}
