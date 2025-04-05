@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 type defaultProvider struct {
@@ -81,6 +82,7 @@ func (p *defaultProvider) WellKnownHandler() http.HandlerFunc {
 
 				w.Header().Set("Content-Type", "application/json")
 				if err := json.NewEncoder(w).Encode(response); err != nil {
+					logger.Error("Error encoding well-known response: %v", err)
 					http.Error(w, "Internal server error", http.StatusInternalServerError)
 				}
 				return

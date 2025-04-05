@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 // RequestModifier modifies requests before they are proxied
@@ -148,6 +149,7 @@ func (m *RegisterModifier) ModifyRequest(req *http.Request) (*http.Request, erro
 	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
 		// Parse form data
 		if err := req.ParseForm(); err != nil {
+			logger.Error("Failed to parse form data: %v", err)
 			return nil, err
 		}
 
@@ -169,12 +171,14 @@ func (m *RegisterModifier) ModifyRequest(req *http.Request) (*http.Request, erro
 		// Read body
 		bodyBytes, err := io.ReadAll(req.Body)
 		if err != nil {
+			logger.Error("Failed to read request body: %v", err)
 			return nil, err
 		}
 
 		// Parse JSON
 		var jsonData map[string]interface{}
 		if err := json.Unmarshal(bodyBytes, &jsonData); err != nil {
+			logger.Error("Failed to parse JSON body: %v", err)
 			return nil, err
 		}
 
@@ -186,6 +190,7 @@ func (m *RegisterModifier) ModifyRequest(req *http.Request) (*http.Request, erro
 		// Marshal back to JSON
 		modifiedBody, err := json.Marshal(jsonData)
 		if err != nil {
+			logger.Error("Failed to marshal modified JSON: %v", err)
 			return nil, err
 		}
 

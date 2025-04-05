@@ -26,11 +26,58 @@ go build -o openmcpauthproxy ./cmd/proxy
 
 ## Using Open MCP Auth Proxy
 
+### Transport Modes
+
+The Open MCP Auth Proxy supports two transport modes:
+
+1. **SSE Mode (Default)**: For MCP servers that use Server-Sent Events transport
+2. **stdio Mode**: For MCP servers that use stdio transport, which requires starting a subprocess
+
+You can specify the transport mode in the `config.yaml` file:
+
+```yaml
+transport_mode: "sse"  # Options: "sse" or "stdio"
+```
+
+Or use the `--stdio` flag to override the configuration:
+
+```bash
+./openmcpauthproxy --stdio
+```
+
+### Configuration
+
+The configuration uses a unified structure with common settings and transport-specific options:
+
+```yaml
+# Common configuration
+listen_port: 8080
+base_url: "http://localhost:8000"  # Base URL for the MCP server
+port: 8000                         # Port for the MCP server
+
+# Path configuration
+paths:
+  sse: "/sse"                      # SSE endpoint path
+  messages: "/messages"            # Messages endpoint path
+
+# Transport mode configuration
+transport_mode: "sse"              # Options: "sse" or "stdio"
+
+# stdio-specific configuration (used only when transport_mode is "stdio")
+stdio:
+  enabled: true
+  user_command: "npx -y @modelcontextprotocol/server-github"
+  work_dir: ""                     # Working directory (optional)
+```
+
+**Notes:**
+- In SSE mode, the proxy connects to an external MCP server at the specified `base_url`
+- In stdio mode, the proxy starts a subprocess using the `stdio.user_command` configuration
+- Common settings like `base_url`, `port`, and `paths` are used for both transport modes
+
 ### Quick Start 
 
-Allows you to just enable authentication and authorization for your MCP server with the preconfigured auth provider powered by Asgardeo.
-
-If you don’t have an MCP server, follow the instructions given here to start your own MCP server for testing purposes.
+If you don't have an MCP server, follow the instructions given here to start your own MCP server for testing purposes.
 
 1. Navigate to `resources` directory.
 2. Initialize a virtual environment.
@@ -58,19 +105,26 @@ python3 echo_server.py
 
 #### Configure the Auth Proxy
 
-Update the following parameters in `config.yaml`.
-
-### demo mode configuration:
-
-```yaml
-mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
-listen_port: 8080                             # Address where the proxy will listen
-```
+Update the necessary parameters in `config.yaml` as shown in the examples above.
 
 #### Start the Auth Proxy
 
+For the demo mode with pre-configured authentication:
+
 ```bash
 ./openmcpauthproxy --demo
+```
+
+For standard mode:
+
+```bash
+./openmcpauthproxy
+```
+
+For stdio mode:
+
+```bash
+./openmcpauthproxy --stdio
 ```
 
 The `--demo` flag enables a demonstration mode with pre-configured authentication and authorization with a sandbox powered by [Asgardeo](https://asgardeo.io/).
@@ -86,7 +140,7 @@ Enable authorization for the MCP server through your own Asgardeo organization
 1. [Register]([url](https://asgardeo.io/signup)) and create an organization in Asgardeo
 2. Now, you need to authorize the OpenMCPAuthProxy to allow dynamically registering MCP Clients as applications in your organization. To do that,
    1. Create an [M2M application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/)  
-         1. [Authorize this application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/#authorize-the-api-resources-for-the-app) to invoke “Application Management API” with the `internal_application_mgt_create` scope. 
+         1. [Authorize this application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/#authorize-the-api-resources-for-the-app) to invoke "Application Management API" with the `internal_application_mgt_create` scope. 
              ![image](https://github.com/user-attachments/assets/0bd57cac-1904-48cc-b7aa-0530224bc41a)
          2. Note the **Client ID** and **Client secret** of this application. This is required by the auth proxy 
 
@@ -95,8 +149,17 @@ Enable authorization for the MCP server through your own Asgardeo organization
 Create a configuration file config.yaml with the following parameters:
 
 ```yaml
-mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
-listen_port: 8080                             # Address where the proxy will listen
+# Common configuration
+listen_port: 8080
+base_url: "http://localhost:8000"  # Base URL for the MCP server
+
+# Path configuration
+paths:
+  sse: "/sse"
+  messages: "/messages"
+
+# Transport mode
+transport_mode: "sse"  # or "stdio"
 
 asgardeo:                                     
   org_name: "<org_name>"                      # Your Asgardeo org name
@@ -110,25 +173,6 @@ asgardeo:
 ./openmcpauthproxy --asgardeo
 ```
 
-### Use with any standard OAuth Server
-
-Enable authorization for the MCP server with a compliant OAuth server
-
-#### Configuration
-
-Create a configuration file config.yaml with the following parameters:
-
-```yaml
-mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
-listen_port: 8080                             # Address where the proxy will listen
-```
-**TODO**: Update the configs for a standard OAuth Server.
-
-#### Start the Auth Proxy
-
-```bash
-./openmcpauthproxy
-```
 #### Integrating with existing OAuth Providers
 
  - [Auth0](docs/Auth0.md) - Enable authorization for the MCP server through your Auth0 organization.
