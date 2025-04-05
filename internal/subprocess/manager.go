@@ -7,6 +7,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"fmt"
+	"strings"
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
 )
@@ -25,6 +27,38 @@ func NewManager() *Manager {
 	return &Manager{
 		shutdownDelay: 5 * time.Second,
 	}
+}
+
+// EnsureDependenciesAvailable checks and installs required package executors
+func EnsureDependenciesAvailable(command string) error {
+    // Always ensure npx is available regardless of the command
+    if _, err := exec.LookPath("npx"); err != nil {
+        // npx is not available, check if npm is installed
+        if _, err := exec.LookPath("npm"); err != nil {
+            return fmt.Errorf("npx not found and npm not available; please install Node.js from https://nodejs.org/")
+        }
+        
+        // Try to install npx using npm
+        log.Printf("npx not found, attempting to install...")
+        cmd := exec.Command("npm", "install", "-g", "npx")
+        cmd.Stdout = os.Stdout
+        cmd.Stderr = os.Stderr
+        
+        if err := cmd.Run(); err != nil {
+            return fmt.Errorf("failed to install npx: %w", err)
+        }
+        
+        log.Printf("npx installed successfully")
+    }
+    
+    // Check if uv is needed based on the command
+    if strings.Contains(command, "uv ") {
+        if _, err := exec.LookPath("uv"); err != nil {
+            return fmt.Errorf("command requires uv but it's not installed; please install it following instructions at https://github.com/astral-sh/uv")
+        }
+    }
+    
+    return nil
 }
 
 // SetShutdownDelay sets the maximum time to wait for graceful shutdown

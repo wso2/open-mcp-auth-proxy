@@ -100,7 +100,6 @@ func NewRouter(cfg *config.Config, provider authz.Provider) http.Handler {
 
 func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier) http.HandlerFunc {
 	// Parse the base URLs up front
-
 	authBase, err := url.Parse(cfg.AuthServerBaseURL)
 	if err != nil {
 		log.Fatalf("Invalid auth server URL: %v", err)
@@ -191,19 +190,13 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 				req.URL.RawQuery = r.URL.RawQuery
 				req.Host = targetURL.Host
 
-				// for key, values := range r.Header {
-				// 	log.Printf("Header: %s, Values: %v", key, values)
-				// }
-
 				cleanHeaders := http.Header{}
-
-				// Preserve the original Origin header if present
-				// if origin := r.Header.Get("Origin"); origin != "" {
-				// 	cleanHeaders.Set("Origin", origin)
-				// } else {
-				// 	log.Printf("[proxy] No Origin header found, setting to target URL: http://localhost:8080")
-				// 	cleanHeaders.Set("Origin", "http://localhost:8080")
-				// }
+				
+				// Set proper origin header to match the target
+				if isSSE {
+					// For SSE, ensure origin matches the target
+					req.Header.Set("Origin", targetURL.Scheme+"://"+targetURL.Host)
+				}
 				
 				for k, v := range r.Header {
 					// Skip hop-by-hop headers
@@ -232,6 +225,18 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 		}
 
 		if isSSE {
+			// Add special response handling for SSE connections to rewrite endpoint URLs
+			rp.Transport = &sseTransport{
+				Transport:  http.DefaultTransport,
+				proxyHost:  r.Host,
+				targetHost: targetURL.Host,
+			}
+			
+			// Set SSE-specific headers
+			w.Header().Set("X-Accel-Buffering", "no")
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("Connection", "keep-alive")
+			
 			// Keep SSE connections open
 			HandleSSE(w, r, rp)
 		} else {
