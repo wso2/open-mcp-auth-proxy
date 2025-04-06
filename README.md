@@ -66,18 +66,25 @@ To enable authorization through your own Asgardeo organization:
 
 1. [Register](https://asgardeo.io/signup) and create an organization in Asgardeo
 2. Create an [M2M application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/)
-3. Authorize this application to invoke "Application Management API" with the `internal_application_mgt_create` scope
-4. Update the existing `config.yaml` with your Asgardeo details:
+    1. [Authorize this application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/#authorize-the-api-resources-for-the-app) to invoke "Application Management API" with the `internal_application_mgt_create` scope
+      ![image](https://github.com/user-attachments/assets/0bd57cac-1904-48cc-b7aa-0530224bc41a)
+    2. Update the existing `config.yaml` with your Asgardeo details:
+
+#### Configure the Auth Proxy
+
+Create a configuration file config.yaml with the following parameters:
 
 ```yaml
-# Add to your config.yaml
-asgardeo:
-  org_name: "<your_org_name>"
-  client_id: "<client_id>"
-  client_secret: "<client_secret>"
+base_url: "http://localhost:8000"  # URL of your MCP server  
+listen_port: 8080                             # Address where the proxy will listen
+
+asgardeo:                                     
+  org_name: "<org_name>"                      # Your Asgardeo org name
+  client_id: "<client_id>"                    # Client ID of the M2M app
+  client_secret: "<client_secret>"            # Client secret of the M2M app
 ```
 
-5. Start the proxy with Asgardeo integration:
+3. Start the proxy with Asgardeo integration:
 
 ```bash
 ./openmcpauthproxy --asgardeo
