@@ -139,6 +139,26 @@ stdio:
   user_command: "npx -y @modelcontextprotocol/server-github"  # Example using a GitHub MCP server
   env:                           # Environment variables (optional)
     - "GITHUB_PERSONAL_ACCESS_TOKEN=gitPAT"
+
+# CORS configuration
+cors:
+  allowed_origins:
+    - "http://localhost:5173"
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+  allowed_headers:
+    - "Authorization"
+    - "Content-Type"
+  allow_credentials: true
+
+# Demo configuration for Asgardeo
+demo:
+  org_name: "openmcpauthdemo"
+  client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
+  client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"    
 ```
 
 2. Run the proxy with stdio mode:
@@ -173,6 +193,26 @@ stdio:
   enabled: true
   user_command: "npx -y @modelcontextprotocol/server-github"  # Command to start the MCP server (requires npx to be installed)
   work_dir: ""  # Optional working directory for the subprocess
+
+# CORS configuration
+cors:
+  allowed_origins:
+    - "http://localhost:5173"
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+  allowed_headers:
+    - "Authorization"
+    - "Content-Type"
+  allow_credentials: true
+
+# Demo configuration for Asgardeo
+demo:
+  org_name: "openmcpauthdemo"
+  client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
+  client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"  
 
 # Asgardeo configuration (used with --asgardeo flag)
 asgardeo:
