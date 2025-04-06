@@ -9,7 +9,7 @@ timeout_seconds: 10
 # Path configuration
 paths:
   sse: "/sse" # SSE endpoint path
-  messages: "/messages" # Messages endpoint path
+  messages: "/messages/" # Messages endpoint path
 
 # Transport mode configuration
 transport_mode: "sse" # Options: "sse" or "stdio"
