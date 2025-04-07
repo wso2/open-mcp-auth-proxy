@@ -122,15 +122,15 @@ The proxy supports two transport modes:
 - **SSE Mode (Default)**: For Server-Sent Events transport
 - **stdio Mode**: For MCP servers that use stdio transport
 
-When using stdio mode, the proxy can:
-- Connect to an already running MCP server that uses stdio transport
-- Start an MCP server as a subprocess using the command specified in the configuration
-  - **Note**: Any commands specified (like `npx` in the example below) must be installed on your system first
+When using stdio mode, the proxy:
+- Starts an MCP server as a subprocess using the command specified in the configuration
+- Communicates with the subprocess through standard input/output (stdio)
+- **Note**: Any commands specified (like `npx` in the example below) must be installed on your system first
 
 To use stdio mode:
 
 ```bash
-./openmcpauthproxy --stdio
+./openmcpauthproxy --demo --stdio
 ```
 
 #### Example: Running an MCP Server as a Subprocess
@@ -150,7 +150,7 @@ stdio:
 # CORS configuration
 cors:
   allowed_origins:
-    - "http://localhost:5173"
+    - "http://localhost:5173"  # Origin of your client application
   allowed_methods:
     - "GET"
     - "POST"
