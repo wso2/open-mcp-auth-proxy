@@ -1,101 +1,81 @@
 # Open MCP Auth Proxy
 
-The Open MCP Auth Proxy is a lightweight proxy designed to sit in front of MCP servers and enforce authorization in compliance with the [Model Context Protocol authorization](https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/authorization/) requirements. It intercepts incoming requests, validates tokens, and offloads authentication and authorization to an OAuth-compliant Identity Provider.
+A lightweight authorization proxy for Model Context Protocol (MCP) servers that enforces authorization according to the [MCP authorization specification](https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/authorization/).
 
-![image](https://github.com/user-attachments/assets/41cf6723-c488-4860-8640-8fec45006f92)
+![Architecture Diagram](https://github.com/user-attachments/assets/41cf6723-c488-4860-8640-8fec45006f92)
 
-## **Setup and Installation**
+## What it Does
 
-### **Prerequisites**
+Open MCP Auth Proxy sits between MCP clients and your MCP server to:
 
-* Go 1.20 or higher  
-* A running MCP server (SSE transport supported)  
-* An MCP client that supports MCP authorization 
+- Intercept incoming requests
+- Validate authorization tokens
+- Offload authentication and authorization to OAuth-compliant Identity Providers
+- Support the MCP authorization protocol
 
-### **Installation**
+## Quick Start
+
+### Prerequisites
+
+* Go 1.20 or higher
+* A running MCP server
+* An MCP client that supports MCP authorization
+
+### Installation
 
 ```bash
-git clone https://github.com/wso2/open-mcp-auth-proxy  
-cd open-mcp-auth-proxy  
-
-go get github.com/golang-jwt/jwt/v4
-go get gopkg.in/yaml.v2
-
+git clone https://github.com/wso2/open-mcp-auth-proxy
+cd open-mcp-auth-proxy
+go get github.com/golang-jwt/jwt/v4 gopkg.in/yaml.v2
 go build -o openmcpauthproxy ./cmd/proxy
 ```
 
-## Using Open MCP Auth Proxy
+### Basic Usage
 
-### Quick Start 
-
-Allows you to just enable authentication and authorization for your MCP server with the preconfigured auth provider powered by Asgardeo.
-
-If you don’t have an MCP server, follow the instructions given here to start your own MCP server for testing purposes.
-
-1. Navigate to `resources` directory.
-2. Initialize a virtual environment.
-
-```bash
-python3 -m venv .venv
-```
-3. Activate virtual environment.
-
-```bash
-source .venv/bin/activate
-```
-
-4. Install dependencies.
-
-```
-pip3 install -r requirements.txt
-```
-
-5. Start the server.
-
-```bash
-python3 echo_server.py
-```
-
-#### Configure the Auth Proxy
-
-Update the following parameters in `config.yaml`.
-
-### demo mode configuration:
+1. The repository comes with a default `config.yaml` file that contains the basic configuration:
 
 ```yaml
-mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
-listen_port: 8080                             # Address where the proxy will listen
+listen_port: 8080
+base_url: "http://localhost:8000"  # Your MCP server URL
+paths:
+  sse: "/sse"
+  messages: "/messages/"
 ```
 
-#### Start the Auth Proxy
+2. Start the proxy in demo mode (uses pre-configured authentication with Asgardeo sandbox):
 
 ```bash
 ./openmcpauthproxy --demo
 ```
 
-The `--demo` flag enables a demonstration mode with pre-configured authentication and authorization with a sandbox powered by [Asgardeo](https://asgardeo.io/).
+3. Connect using an MCP client like [MCP Inspector](https://github.com/shashimalcse/inspector)(This is a temporary fork with fixes for authentication [issues](https://github.com/modelcontextprotocol/typescript-sdk/issues/257) in the original implementation)
 
-#### Connect Using an MCP Client
+## Identity Provider Integration
 
-You can use this fork of the [MCP Inspector](https://github.com/shashimalcse/inspector) to test the connection and try out the complete authorization flow. (This is a temporary fork with fixes for authentication [issues](https://github.com/modelcontextprotocol/typescript-sdk/issues/257) in the original implementation)
+### Demo Mode
 
-### Use with Asgardeo
+For quick testing, use the `--demo` flag which includes pre-configured authentication and authorization with an Asgardeo sandbox.
 
-Enable authorization for the MCP server through your own Asgardeo organization
+```bash
+./openmcpauthproxy --demo
+```
 
-1. [Register]([url](https://asgardeo.io/signup)) and create an organization in Asgardeo
-2. Now, you need to authorize the OpenMCPAuthProxy to allow dynamically registering MCP Clients as applications in your organization. To do that,
-   1. Create an [M2M application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/)  
-         1. [Authorize this application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/#authorize-the-api-resources-for-the-app) to invoke “Application Management API” with the `internal_application_mgt_create` scope. 
-             ![image](https://github.com/user-attachments/assets/0bd57cac-1904-48cc-b7aa-0530224bc41a)
-         2. Note the **Client ID** and **Client secret** of this application. This is required by the auth proxy 
+### Asgardeo Integration
+
+To enable authorization through your own Asgardeo organization:
+
+1. [Register](https://asgardeo.io/signup) and create an organization in Asgardeo
+2. Create an [M2M application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/)
+    1. [Authorize this application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/#authorize-the-api-resources-for-the-app) to invoke "Application Management API" with the `internal_application_mgt_create` scope
+      ![image](https://github.com/user-attachments/assets/0bd57cac-1904-48cc-b7aa-0530224bc41a)
+    2. Update the existing `config.yaml` with your Asgardeo details:
 
 #### Configure the Auth Proxy
 
 Create a configuration file config.yaml with the following parameters:
 
 ```yaml
-mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
+base_url: "http://localhost:8000"  # URL of your MCP server  
 listen_port: 8080                             # Address where the proxy will listen
 
 asgardeo:                                     
@@ -104,31 +84,146 @@ asgardeo:
   client_secret: "<client_secret>"            # Client secret of the M2M app
 ```
 
-#### Start the Auth Proxy
+3. Start the proxy with Asgardeo integration:
 
 ```bash
 ./openmcpauthproxy --asgardeo
 ```
 
-### Use with any standard OAuth Server
+### Other OAuth Providers
 
-Enable authorization for the MCP server with a compliant OAuth server
+- [Auth0 Integration Guide](docs/Auth0.md)
 
-#### Configuration
+## Testing with an Example MCP Server
 
-Create a configuration file config.yaml with the following parameters:
+If you don't have an MCP server, you can use the included example:
 
-```yaml
-mcp_server_base_url: "http://localhost:8000"  # URL of your MCP server  
-listen_port: 8080                             # Address where the proxy will listen
-```
-**TODO**: Update the configs for a standard OAuth Server.
-
-#### Start the Auth Proxy
+1. Navigate to the `resources` directory
+2. Set up a Python environment:
 
 ```bash
-./openmcpauthproxy
+python3 -m venv .venv
+source .venv/bin/activate
+pip3 install -r requirements.txt
 ```
-#### Integrating with existing OAuth Providers
 
- - [Auth0](docs/Auth0.md) - Enable authorization for the MCP server through your Auth0 organization.
+3. Start the example server:
+
+```bash
+python3 echo_server.py
+```
+
+# Advanced Configuration
+
+### Transport Modes
+
+The proxy supports two transport modes:
+
+- **SSE Mode (Default)**: For Server-Sent Events transport
+- **stdio Mode**: For MCP servers that use stdio transport
+
+When using stdio mode, the proxy:
+- Starts an MCP server as a subprocess using the command specified in the configuration
+- Communicates with the subprocess through standard input/output (stdio)
+- **Note**: Any commands specified (like `npx` in the example below) must be installed on your system first
+
+To use stdio mode:
+
+```bash
+./openmcpauthproxy --demo --stdio
+```
+
+#### Example: Running an MCP Server as a Subprocess
+
+1. Configure stdio mode in your `config.yaml`:
+
+```yaml
+listen_port: 8080
+base_url: "http://localhost:8000" 
+
+stdio:
+  enabled: true
+  user_command: "npx -y @modelcontextprotocol/server-github"  # Example using a GitHub MCP server
+  env:                           # Environment variables (optional)
+    - "GITHUB_PERSONAL_ACCESS_TOKEN=gitPAT"
+
+# CORS configuration
+cors:
+  allowed_origins:
+    - "http://localhost:5173"  # Origin of your client application
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+  allowed_headers:
+    - "Authorization"
+    - "Content-Type"
+  allow_credentials: true
+
+# Demo configuration for Asgardeo
+demo:
+  org_name: "openmcpauthdemo"
+  client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
+  client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"    
+```
+
+2. Run the proxy with stdio mode:
+
+```bash
+./openmcpauthproxy --demo
+```
+
+The proxy will:
+- Start the MCP server as a subprocess using the specified command
+- Handle all authorization requirements
+- Forward messages between clients and the server
+
+### Complete Configuration Reference
+
+```yaml
+# Common configuration
+listen_port: 8080
+base_url: "http://localhost:8000"
+port: 8000
+
+# Path configuration
+paths:
+  sse: "/sse"
+  messages: "/messages/"
+
+# Transport mode
+transport_mode: "sse"  # Options: "sse" or "stdio"
+
+# stdio-specific configuration (used only in stdio mode)
+stdio:
+  enabled: true
+  user_command: "npx -y @modelcontextprotocol/server-github"  # Command to start the MCP server (requires npx to be installed)
+  work_dir: ""  # Optional working directory for the subprocess
+
+# CORS configuration
+cors:
+  allowed_origins:
+    - "http://localhost:5173"
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+  allowed_headers:
+    - "Authorization"
+    - "Content-Type"
+  allow_credentials: true
+
+# Demo configuration for Asgardeo
+demo:
+  org_name: "openmcpauthdemo"
+  client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
+  client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"  
+
+# Asgardeo configuration (used with --asgardeo flag)
+asgardeo:
+  org_name: "<org_name>"
+  client_id: "<client_id>"
+  client_secret: "<client_secret>"
+```

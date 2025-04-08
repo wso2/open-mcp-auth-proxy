@@ -1,15 +1,31 @@
 # config.yaml
 
-mcp_server_base_url: ""
+# Common configuration for all transport modes
 listen_port: 8080
+base_url: "http://localhost:8000" # Base URL for the MCP server
+port: 8000 # Port for the MCP server
 timeout_seconds: 10
 
-mcp_paths:
-  - /messages/
-  - /sse
+# Path configuration
+paths:
+  sse: "/sse" # SSE endpoint path
+  messages: "/messages/" # Messages endpoint path
 
+# Transport mode configuration
+transport_mode: "sse" # Options: "sse" or "stdio"
+
+# stdio-specific configuration (used only when transport_mode is "stdio")
+stdio:
+  enabled: true
+  user_command: "npx -y @modelcontextprotocol/server-github"
+  work_dir: "" # Working directory (optional)
+  # env:                           # Environment variables (optional)
+  #   - "NODE_ENV=development"
+
+# Path mapping (optional)
 path_mapping:
 
+# CORS configuration
 cors:
   allowed_origins:
     - "http://localhost:5173"
@@ -23,10 +39,8 @@ cors:
     - "Content-Type"
   allow_credentials: true
 
+# Demo configuration for Asgardeo
 demo:
   org_name: "openmcpauthdemo"
   client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
   client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"
-
-
-

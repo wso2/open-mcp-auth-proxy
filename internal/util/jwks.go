@@ -4,12 +4,12 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
-	"log"
 	"math/big"
 	"net/http"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 type JWKS struct {
@@ -50,7 +50,7 @@ func FetchJWKS(jwksURL string) error {
 			publicKeys[parsedKey.Kid] = pubKey
 		}
 	}
-	log.Printf("[JWKS] Loaded %d public keys.", len(publicKeys))
+	logger.Info("Loaded %d public keys.", len(publicKeys))
 	return nil
 }
 

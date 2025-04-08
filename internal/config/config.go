@@ -1,12 +1,35 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v2"
 )
 
-// AsgardeoConfig groups all Asgardeo-specific fields
+// Transport mode for MCP server
+type TransportMode string
+
+const (
+	SSETransport   TransportMode = "sse"
+	StdioTransport TransportMode = "stdio"
+)
+
+// Common path configuration for all transport modes
+type PathsConfig struct {
+	SSE       string `yaml:"sse"`
+	Messages  string `yaml:"messages"`
+}
+
+// StdioConfig contains stdio-specific configuration
+type StdioConfig struct {
+	Enabled     bool     `yaml:"enabled"`
+	UserCommand string   `yaml:"user_command"` // The command provided by the user
+	WorkDir     string   `yaml:"work_dir"`     // Working directory (optional)
+	Args        []string `yaml:"args,omitempty"` // Additional arguments
+	Env         []string `yaml:"env,omitempty"`  // Environment variables
+}
+
 type DemoConfig struct {
 	ClientID     string `yaml:"client_id"`
 	ClientSecret string `yaml:"client_secret"`
@@ -60,20 +83,73 @@ type DefaultConfig struct {
 }
 
 type Config struct {
-	AuthServerBaseURL string
-	MCPServerBaseURL  string `yaml:"mcp_server_base_url"`
-	ListenPort        int    `yaml:"listen_port"`
-	JWKSURL           string
-	TimeoutSeconds    int               `yaml:"timeout_seconds"`
-	MCPPaths          []string          `yaml:"mcp_paths"`
-	PathMapping       map[string]string `yaml:"path_mapping"`
-	Mode              string            `yaml:"mode"`
-	CORSConfig        CORSConfig        `yaml:"cors"`
+	AuthServerBaseURL  string
+	ListenPort         int           `yaml:"listen_port"`
+	BaseURL            string        `yaml:"base_url"`
+	Port               int           `yaml:"port"`
+	JWKSURL            string
+	TimeoutSeconds     int               `yaml:"timeout_seconds"`
+	PathMapping        map[string]string `yaml:"path_mapping"`
+	Mode               string            `yaml:"mode"`
+	CORSConfig         CORSConfig        `yaml:"cors"`
+	TransportMode      TransportMode     `yaml:"transport_mode"`
+	Paths              PathsConfig       `yaml:"paths"`
+	Stdio              StdioConfig       `yaml:"stdio"`
 
 	// Nested config for Asgardeo
 	Demo     DemoConfig     `yaml:"demo"`
 	Asgardeo AsgardeoConfig `yaml:"asgardeo"`
 	Default  DefaultConfig  `yaml:"default"`
+}
+
+// Validate checks if the config is valid based on transport mode
+func (c *Config) Validate() error {
+	// Validate based on transport mode
+	if c.TransportMode == StdioTransport {
+		if !c.Stdio.Enabled {
+			return fmt.Errorf("stdio.enabled must be true in stdio transport mode")
+		}
+		if c.Stdio.UserCommand == "" {
+			return fmt.Errorf("stdio.user_command is required in stdio transport mode")
+		}
+	}
+
+	// Validate paths
+	if c.Paths.SSE == "" {
+		c.Paths.SSE = "/sse" // Default value
+	}
+	if c.Paths.Messages == "" {
+		c.Paths.Messages = "/messages" // Default value
+	}
+
+	// Validate base URL
+	if c.BaseURL == "" {
+		if c.Port > 0 {
+			c.BaseURL = fmt.Sprintf("http://localhost:%d", c.Port)
+		} else {
+			c.BaseURL = "http://localhost:8000" // Default value
+		}
+	}
+
+	return nil
+}
+
+// GetMCPPaths returns the list of paths that should be proxied to the MCP server
+func (c *Config) GetMCPPaths() []string {
+	return []string{c.Paths.SSE, c.Paths.Messages}
+}
+
+// BuildExecCommand constructs the full command string for execution in stdio mode
+func (c *Config) BuildExecCommand() string {
+	if c.Stdio.UserCommand == "" {
+		return ""
+	}
+
+	// Construct the full command
+	return fmt.Sprintf(
+		`npx -y supergateway --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
+		c.Stdio.UserCommand, c.Port, c.BaseURL, c.Paths.SSE, c.Paths.Messages,
+	)
 }
 
 // LoadConfig reads a YAML config file into Config struct.
@@ -89,8 +165,26 @@ func LoadConfig(path string) (*Config, error) {
 	if err := decoder.Decode(&cfg); err != nil {
 		return nil, err
 	}
+	
+	// Set default values
 	if cfg.TimeoutSeconds == 0 {
 		cfg.TimeoutSeconds = 15 // default
 	}
+	
+	// Set default transport mode if not specified
+	if cfg.TransportMode == "" {
+		cfg.TransportMode = SSETransport // Default to SSE
+	}
+
+	// Set default port if not specified
+	if cfg.Port == 0 {
+		cfg.Port = 8000 // default
+	}
+	
+	// Validate the configuration
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	
 	return &cfg, nil
 }
