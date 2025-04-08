@@ -28,9 +28,17 @@ Update your `config.yaml` with Auth0 settings:
 
 ```yaml
 # Basic proxy configuration
-mcp_server_base_url: "http://localhost:8000"
 listen_port: 8080
-timeout_seconds: 10
+base_url: "http://localhost:8000"
+port: 8000
+
+# Path configuration
+paths:
+  sse: "/sse"
+  messages: "/messages/"
+
+# Transport mode
+transport_mode: "sse"
 
 # CORS configuration
 cors:
