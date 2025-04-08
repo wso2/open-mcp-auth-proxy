@@ -31,3 +31,7 @@ go.sum
 .DS_Store
 
 openmcpauthproxy
+
+# test out files
+coverage.out
+coverage.html
