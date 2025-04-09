@@ -30,4 +30,12 @@ go.sum
 # OS generated files
 .DS_Store
 
+# builds
 openmcpauthproxy
+
+# test out files
+coverage.out
+coverage.html
+
+# IDE files
+.vscode
