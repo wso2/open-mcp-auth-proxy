@@ -69,6 +69,5 @@ help:
 	@echo "  test       : Run tests"
 	@echo "  coverage   : Run tests with coverage report"
 	@echo "  fmt        : Run gofmt"
-	@echo "  lint       : Run golangci-lint"
 	@echo "  vet        : Run go vet"
 	@echo "  help       : Show this help message"
