@@ -25,9 +25,9 @@ Update the `config.yaml` file in your Open MCP Auth Proxy setup using your Keycl
 
 ```yaml
 # Proxy server configuration
-listen_port: 8081              # Port for the auth proxy
+listen_port: 8081                 # Port for the auth proxy
 base_url: "http://localhost:8000" # Base URL of the MCP server
-port: 8000                     # MCP server port
+port: 8000                        # MCP server port
 
 # Define path mappings
 paths:
