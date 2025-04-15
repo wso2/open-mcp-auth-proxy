@@ -37,6 +37,7 @@ cors:
   allowed_headers:
     - "Authorization"
     - "Content-Type"
+    - "mcp-protocol-version"
   allow_credentials: true
 
 # Demo configuration for Asgardeo
