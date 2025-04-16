@@ -10,6 +10,9 @@
 name: Release
 
 on:
+  pull_request:
+    branches: [ main ]
+    types: [closed]
   workflow_dispatch:
     inputs:
       version_type:

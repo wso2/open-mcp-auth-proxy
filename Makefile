@@ -31,18 +31,21 @@ build: clean test build-linux build-linux-arm build-darwin
 build-linux:
 	mkdir -p $(BUILD_DIR)/linux
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -x -ldflags "-X main.version=$(BUILD_VERSION) \
+	-X 'main.buildDate=$$(date -u '+%Y-%m-%d %H:%M:%S UTC')'" \
 	-o $(BUILD_DIR)/linux/openmcpauthproxy $(PROJECT_ROOT)/cmd/proxy
 	cp config.yaml $(BUILD_DIR)/linux
 
 build-linux-arm:
 	mkdir -p $(BUILD_DIR)/linux-arm
 	GOOS=linux GOARCH=arm CGO_ENABLED=0 go build -x -ldflags "-X main.version=$(BUILD_VERSION) \
+	-X 'main.buildDate=$$(date -u '+%Y-%m-%d %H:%M:%S UTC')'" \
 	-o $(BUILD_DIR)/linux-arm/openmcpauthproxy $(PROJECT_ROOT)/cmd/proxy
 	cp config.yaml $(BUILD_DIR)/linux-arm
 
 build-darwin:
 	mkdir -p $(BUILD_DIR)/darwin
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -x -ldflags "-X main.version=$(BUILD_VERSION) \
+	-X 'main.buildDate=$$(date -u '+%Y-%m-%d %H:%M:%S UTC')'" \
 	-o $(BUILD_DIR)/darwin/openmcpauthproxy $(PROJECT_ROOT)/cmd/proxy
 	cp config.yaml $(BUILD_DIR)/darwin
 
