@@ -13,7 +13,7 @@ set -e
 set -o pipefail
 
 # Check the number of arguments passed.
-if [ "$#" -ne 2 ]; then
+if [ "$#" -ne 3 ]; then
     echo "Error: Invalid or insufficient arguments provided!" >&2
     echo "Usage: $0 <GITHUB_TOKEN> <WORK_DIR>" >&2
     exit 1
