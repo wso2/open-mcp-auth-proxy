@@ -31,7 +31,7 @@ go.sum
 .DS_Store
 
 # builds
-openmcpauthproxy
+build
 
 # test out files
 coverage.out

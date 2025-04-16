@@ -1,6 +1,7 @@
 # Makefile for open-mcp-auth-proxy
 
 # Variables
+PROJECT_ROOT := $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 BINARY_NAME := openmcpauthproxy
 GO := go
 GOFMT := gofmt
@@ -20,16 +21,33 @@ BUILD_OPTS := -v
 # Set test options
 TEST_OPTS := -v -race
 
-.PHONY: all build clean test fmt lint vet coverage help
+.PHONY: all clean test fmt lint vet coverage help
 
 # Default target
-all: lint test build
+all: lint test build-linux build-linux-arm build-darwin
 
-# Build the application
-build: 
-	@echo "Building $(BINARY_NAME)..."
-	@mkdir -p $(BUILD_DIR)
-	$(GO) build $(BUILD_OPTS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/proxy
+build: clean test build-linux build-linux-arm build-darwin
+
+build-linux:
+	mkdir -p $(BUILD_DIR)/linux
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -x -ldflags "-X main.version=$(BUILD_VERSION) \
+	-X 'main.buildDate=$$(date -u '+%Y-%m-%d %H:%M:%S UTC')'" \
+	-o $(BUILD_DIR)/linux/openmcpauthproxy $(PROJECT_ROOT)/cmd/proxy
+	cp config.yaml $(BUILD_DIR)/linux
+
+build-linux-arm:
+	mkdir -p $(BUILD_DIR)/linux-arm
+	GOOS=linux GOARCH=arm CGO_ENABLED=0 go build -x -ldflags "-X main.version=$(BUILD_VERSION) \
+	-X 'main.buildDate=$$(date -u '+%Y-%m-%d %H:%M:%S UTC')'" \
+	-o $(BUILD_DIR)/linux-arm/openmcpauthproxy $(PROJECT_ROOT)/cmd/proxy
+	cp config.yaml $(BUILD_DIR)/linux-arm
+
+build-darwin:
+	mkdir -p $(BUILD_DIR)/darwin
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -x -ldflags "-X main.version=$(BUILD_VERSION) \
+	-X 'main.buildDate=$$(date -u '+%Y-%m-%d %H:%M:%S UTC')'" \
+	-o $(BUILD_DIR)/darwin/openmcpauthproxy $(PROJECT_ROOT)/cmd/proxy
+	cp config.yaml $(BUILD_DIR)/darwin
 
 # Clean build artifacts
 clean:
