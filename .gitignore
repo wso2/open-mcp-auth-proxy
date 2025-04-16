@@ -24,9 +24,6 @@
 hs_err_pid*
 replay_pid*
 
-# Go module cache files
-go.sum
-
 # OS generated files
 .DS_Store
 
