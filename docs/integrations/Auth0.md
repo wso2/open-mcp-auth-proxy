@@ -4,7 +4,7 @@ This guide will help you configure Open MCP Auth Proxy to use Auth0 as your iden
 
 ### Prerequisites
 
-- An Auth0 organization (sign up here if you don't have one)
+- An Auth0 organization (sign up [here](https://auth0.com) if you don't have one)
 - Open MCP Auth Proxy installed
 
 ### Setting Up Auth0
