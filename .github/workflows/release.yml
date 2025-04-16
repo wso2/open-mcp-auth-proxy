@@ -59,6 +59,7 @@ jobs:
 
       - name: Build and test
         run: make build
+        working-directory: .
 
       - name: Update artifact version, package, commit, and create release.
         env:
