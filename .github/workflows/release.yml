@@ -27,6 +27,8 @@ on:
 jobs:
   update-and-release:
     runs-on: ubuntu-latest
+    env:
+      GOPROXY: https://proxy.golang.org
     if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v2
