@@ -86,7 +86,6 @@ func TestTokenModifier(t *testing.T) {
 		t.Fatalf("Failed to read body: %v", err)
 	}
 	bodyStr := string(body[:n])
-	print(bodyStr)
 
 	// Parse the form data from the modified request
 	if err := modifiedReq.ParseForm(); err != nil {
