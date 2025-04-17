@@ -92,7 +92,8 @@ asgardeo:
 
 ### Other OAuth Providers
 
-- [Auth0 Integration Guide](docs/Auth0.md)
+- [Auth0](docs/integrations/Auth0.md)
+- [Keycloak](docs/integrations/keycloak.md)
 
 ## Testing with an Example MCP Server
 
