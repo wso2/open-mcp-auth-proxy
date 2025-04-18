@@ -12,6 +12,8 @@
 set -e
 set -o pipefail
 
+UPSTREAM_BRANCH="main"
+
 # Assign command line arguments to variables.
 GIT_TOKEN=$1
 WORK_DIR=$2

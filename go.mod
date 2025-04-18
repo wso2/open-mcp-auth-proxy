@@ -1,6 +1,6 @@
 module github.com/wso2/open-mcp-auth-proxy
 
-go 1.22.3
+go 1.21
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
