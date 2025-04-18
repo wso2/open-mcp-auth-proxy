@@ -82,8 +82,13 @@ echo "Creating release packages for version $NEW_VERSION..."
 # List of supported OSes.
 oses=("linux" "linux-arm" "darwin")
 
+cd "${BUILD_DIRECTORY}"
+
+ls -a
+
 # Navigate to the release directory.
-cd "${RELEASE_DIRECTORY}"
+#cd "${RELEASE_DIRECTORY}"
+cd "/releases"
 
 for os in "${oses[@]}"; do
   os_dir="../$os"
