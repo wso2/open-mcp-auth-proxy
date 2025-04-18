@@ -1,0 +1,64 @@
+#
+# Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+#
+# This software is the property of WSO2 LLC. and its suppliers, if any.
+# Dissemination of any information or reproduction of any material contained
+# herein in any form is strictly forbidden, unless permitted by WSO2 expressly.
+# You may not alter or remove any copyright or other notice from copies of this content.
+#
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        type: choice
+        description: Choose the type of version update
+        options:
+            - 'major'
+            - 'minor'
+            - 'patch'
+        required: true
+
+jobs:
+  update-and-release:
+    runs-on: ubuntu-latest
+    env:
+      GOPROXY: https://proxy.golang.org
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: 'main'
+          fetch-depth: 0
+          token: ${{ secrets.GIT_BOT_PAT }}
+      - uses: actions/checkout@v2
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v3
+        with:
+          go-version: "^1.x"
+
+      - name: Cache Go modules
+        id: cache-go-modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-modules-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-modules-
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Build and test
+        run: make build
+        working-directory: .
+
+      - name: Update artifact version, package, commit, and create release.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_BOT_PAT }}
+        run: bash ./.github/scripts/release.sh $GITHUB_TOKEN ${{ github.workspace }} ${{ github.event.inputs.version_type }}
