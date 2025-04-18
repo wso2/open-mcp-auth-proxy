@@ -25,16 +25,25 @@ Open MCP Auth Proxy sits between MCP clients and your MCP server to:
 
 * Go 1.20 or higher
 * A running MCP server
+
+> If you don't have an MCP server, you can use the included example:
+> 
+> 1. Navigate to the `resources` directory
+> 2. Set up a Python environment:
+>
+> ```bash
+> python3 -m venv .venv
+> source .venv/bin/activate
+> pip3 install -r requirements.txt
+> ```
+> 
+> 3. Start the example server:
+>
+> ```bash
+> python3 echo_server.py
+> ```
+
 * An MCP client that supports MCP authorization
-
-### Installation
-
-```bash
-git clone https://github.com/wso2/open-mcp-auth-proxy
-cd open-mcp-auth-proxy
-go get github.com/golang-jwt/jwt/v4 gopkg.in/yaml.v2
-go build -o openmcpauthproxy ./cmd/proxy
-```
 
 ### Basic Usage
 
@@ -56,29 +65,18 @@ paths:
 
 3. Connect using an MCP client like [MCP Inspector](https://github.com/shashimalcse/inspector)(This is a temporary fork with fixes for authentication [issues](https://github.com/modelcontextprotocol/typescript-sdk/issues/257) in the original implementation)
 
-## Identity Provider Integration
+## Connect an Identity Provider
 
-### Demo Mode
+### Asgardeo
 
-For quick testing, use the `--demo` flag which includes pre-configured authentication and authorization with an Asgardeo sandbox.
-
-```bash
-./openmcpauthproxy --demo
-```
-
-### Asgardeo Integration
-
-To enable authorization through your own Asgardeo organization:
+To enable authorization through your Asgardeo organization:
 
 1. [Register](https://asgardeo.io/signup) and create an organization in Asgardeo
 2. Create an [M2M application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/)
     1. [Authorize this application](https://wso2.com/asgardeo/docs/guides/applications/register-machine-to-machine-app/#authorize-the-api-resources-for-the-app) to invoke "Application Management API" with the `internal_application_mgt_create` scope
       ![image](https://github.com/user-attachments/assets/0bd57cac-1904-48cc-b7aa-0530224bc41a)
-    2. Update the existing `config.yaml` with your Asgardeo details:
-
-#### Configure the Auth Proxy
-
-Create a configuration file config.yaml with the following parameters:
+   
+3. Update `config.yaml` with the following parameters.
 
 ```yaml
 base_url: "http://localhost:8000"  # URL of your MCP server  
@@ -90,7 +88,7 @@ asgardeo:
   client_secret: "<client_secret>"            # Client secret of the M2M app
 ```
 
-3. Start the proxy with Asgardeo integration:
+4. Start the proxy with Asgardeo integration:
 
 ```bash
 ./openmcpauthproxy --asgardeo
@@ -100,25 +98,6 @@ asgardeo:
 
 - [Auth0](docs/integrations/Auth0.md)
 - [Keycloak](docs/integrations/keycloak.md)
-
-## Testing with an Example MCP Server
-
-If you don't have an MCP server, you can use the included example:
-
-1. Navigate to the `resources` directory
-2. Set up a Python environment:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip3 install -r requirements.txt
-```
-
-3. Start the example server:
-
-```bash
-python3 echo_server.py
-```
 
 # Advanced Configuration
 
@@ -233,4 +212,13 @@ asgardeo:
   org_name: "<org_name>"
   client_id: "<client_id>"
   client_secret: "<client_secret>"
+```
+
+### Build from source
+
+```bash
+git clone https://github.com/wso2/open-mcp-auth-proxy
+cd open-mcp-auth-proxy
+go get github.com/golang-jwt/jwt/v4 gopkg.in/yaml.v2
+go build -o openmcpauthproxy ./cmd/proxy
 ```
