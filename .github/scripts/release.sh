@@ -28,25 +28,8 @@ VERSION_TYPE=$3 # possible values: major, minor, patch
 BUILD_DIRECTORY="$WORK_DIR/build"
 RELEASE_DIRECTORY="$BUILD_DIRECTORY/releases"
 
-# Configuration variables.
-GIT_EMAIL="iam-cloud@wso2.com"
-GIT_USERNAME="wso2-iam-cloud-bot"
-UPSTREAM_REPO_URL="https://github.com/wso2/open-mcp-auth-proxy.git"
-UPSTREAM_BRANCH="main"
-
-# Configure git.
-git config --global user.email "${GIT_EMAIL}"
-git config --global user.name "${GIT_USERNAME}"
-
 # Navigate to the working directory.
 cd "${WORK_DIR}"
-
-# Set 'origin' to point to the upstream repository.
-git remote set-url origin "${UPSTREAM_REPO_URL}"
-
-# Ensure the latest changes are pulled.
-git checkout ${UPSTREAM_BRANCH}
-git pull
 
 # Create the release directory.
 if [ ! -d "$RELEASE_DIRECTORY" ]; then
