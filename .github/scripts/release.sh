@@ -64,13 +64,8 @@ echo "Creating release packages for version $NEW_VERSION..."
 # List of supported OSes.
 oses=("linux" "linux-arm" "darwin")
 
-cd "${BUILD_DIRECTORY}"
-
-ls -a
-
 # Navigate to the release directory.
-#cd "${RELEASE_DIRECTORY}"
-cd "/releases"
+cd "${RELEASE_DIRECTORY}"
 
 for os in "${oses[@]}"; do
   os_dir="../$os"
@@ -79,7 +74,7 @@ for os in "${oses[@]}"; do
     release_artifact_folder="openmcpauthproxy_${os}-v${CURRENT_VERSION}"
     mkdir -p "$release_artifact_folder"
 
-    cp -r "$os_dir/*" "$release_artifact_folder"
+    cp -r $os_dir/* "$release_artifact_folder"
 
     # Zip the release package.
     zip_file="$release_artifact_folder.zip"
