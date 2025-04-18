@@ -12,17 +12,28 @@
 set -e
 set -o pipefail
 
-# Check the number of arguments passed.
-if [ "$#" -ne 3 ]; then
-    echo "Error: Invalid or insufficient arguments provided!" >&2
-    echo "Usage: $0 <GITHUB_TOKEN> <WORK_DIR>" >&2
-    exit 1
-fi
-
 # Assign command line arguments to variables.
 GIT_TOKEN=$1
 WORK_DIR=$2
 VERSION_TYPE=$3 # possible values: major, minor, patch
+
+ Check if GIT_TOKEN is empty
+if [ -z "$GIT_TOKEN" ]; then
+  echo "❌ Error: GIT_TOKEN is not set."
+  exit 1
+fi
+
+# Check if WORK_DIR is empty
+if [ -z "$WORK_DIR" ]; then
+  echo "❌ Error: WORK_DIR is not set."
+  exit 1
+fi
+
+# Validate VERSION_TYPE
+if [[ "$VERSION_TYPE" != "major" && "$VERSION_TYPE" != "minor" && "$VERSION_TYPE" != "patch" ]]; then
+  echo "❌ Error: VERSION_TYPE must be one of: major, minor, or patch."
+  exit 1
+fi
 
 BUILD_DIRECTORY="$WORK_DIR/build"
 RELEASE_DIRECTORY="$BUILD_DIRECTORY/releases"
