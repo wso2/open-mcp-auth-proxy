@@ -19,7 +19,7 @@ GIT_TOKEN=$1
 WORK_DIR=$2
 VERSION_TYPE=$3 # possible values: major, minor, patch
 
- Check if GIT_TOKEN is empty
+# Check if GIT_TOKEN is empty
 if [ -z "$GIT_TOKEN" ]; then
   echo "❌ Error: GIT_TOKEN is not set."
   exit 1
