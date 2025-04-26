@@ -32,7 +32,7 @@ jobs:
         with:
           ref: 'main'
           fetch-depth: 0
-          token: ${{ secrets.GIT_BOT_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v2
 
       - name: Set up Go 1.x
@@ -60,5 +60,5 @@ jobs:
 
       - name: Update artifact version, package, commit, and create release.
         env:
-          GITHUB_TOKEN: ${{ secrets.GIT_BOT_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash ./.github/scripts/release.sh $GITHUB_TOKEN ${{ github.workspace }} ${{ github.event.inputs.version_type }}
