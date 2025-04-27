@@ -47,21 +47,23 @@ Open MCP Auth Proxy sits between MCP clients and your MCP server to:
 
 ### Basic Usage
 
-1. The repository comes with a default `config.yaml` file that contains the basic configuration:
-
-```yaml
-listen_port: 8080
-base_url: "http://localhost:8000"  # Your MCP server URL
-paths:
-  sse: "/sse"
-  messages: "/messages/"
-```
+1. Download the latest release from [Github releases](https://github.com/wso2/open-mcp-auth-proxy/releases/latest).
 
 2. Start the proxy in demo mode (uses pre-configured authentication with Asgardeo sandbox):
 
 ```bash
 ./openmcpauthproxy --demo
 ```
+
+> The repository comes with a default `config.yaml` file that contains the basic configuration:
+> 
+> ```yaml
+> listen_port: 8080
+> base_url: "http://localhost:8000"  # Your MCP server URL
+> paths:
+>   sse: "/sse"
+>   messages: "/messages/"
+> ```
 
 3. Connect using an MCP client like [MCP Inspector](https://github.com/shashimalcse/inspector)(This is a temporary fork with fixes for authentication [issues](https://github.com/modelcontextprotocol/typescript-sdk/issues/257) in the original implementation)
 
