@@ -98,11 +98,19 @@ type Config struct {
 	TransportMode     TransportMode     `yaml:"transport_mode"`
 	Paths             PathsConfig       `yaml:"paths"`
 	Stdio             StdioConfig       `yaml:"stdio"`
+	RequiredScopes    map[string]string `yaml:"required_scopes"`
 
 	// Nested config for Asgardeo
 	Demo     DemoConfig     `yaml:"demo"`
 	Asgardeo AsgardeoConfig `yaml:"asgardeo"`
 	Default  DefaultConfig  `yaml:"default"`
+
+	// Protected resource metadata
+	ResourceIdentifier     string            `yaml:"resource_identifier"`
+	ScopesSupported        map[string]string `yaml:"scopes_supported"`
+	AuthorizationServers   []string          `yaml:"authorization_servers"`
+	JwksURI                string            `yaml:"jwks_uri,omitempty"`
+	BearerMethodsSupported []string          `yaml:"bearer_methods_supported,omitempty"`
 }
 
 // Validate checks if the config is valid based on transport mode

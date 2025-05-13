@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
+	"github.com/wso2/open-mcp-auth-proxy/internal/constants"
 	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
@@ -17,7 +19,7 @@ import (
 // NewRouter builds an http.ServeMux that routes
 // * /authorize, /token, /register, /.well-known to the provider or proxy
 // * MCP paths to the MCP server, etc.
-func NewRouter(cfg *config.Config, provider authz.Provider) http.Handler {
+func NewRouter(cfg *config.Config, provider authz.Provider, policyEngine authz.PolicyEngine) http.Handler {
 	mux := http.NewServeMux()
 
 	modifiers := map[string]RequestModifier{
@@ -55,6 +57,20 @@ func NewRouter(cfg *config.Config, provider authz.Provider) http.Handler {
 				defaultPaths = append(defaultPaths, "/.well-known/oauth-authorization-server")
 			}
 
+			mux.HandleFunc("/.well-known/oauth-protected-resource", func(w http.ResponseWriter, r *http.Request) {
+				origin := r.Header.Get("Origin")
+				allowed := getAllowedOrigin(origin, cfg)
+				if r.Method == http.MethodOptions {
+					addCORSHeaders(w, cfg, allowed, r.Header.Get("Access-Control-Request-Headers"))
+					w.WriteHeader(http.StatusNoContent)
+					return
+				}
+
+				addCORSHeaders(w, cfg, allowed, "")
+				provider.ProtectedResourceMetadataHandler()(w, r)
+			})
+			registeredPaths["/.well-known/oauth-protected-resource"] = true
+
 			defaultPaths = append(defaultPaths, "/authorize")
 			defaultPaths = append(defaultPaths, "/token")
 			defaultPaths = append(defaultPaths, "/register")
@@ -76,7 +92,7 @@ func NewRouter(cfg *config.Config, provider authz.Provider) http.Handler {
 
 	for _, path := range defaultPaths {
 		if !registeredPaths[path] {
-			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers))
+			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers, policyEngine))
 			registeredPaths[path] = true
 		}
 	}
@@ -84,14 +100,14 @@ func NewRouter(cfg *config.Config, provider authz.Provider) http.Handler {
 	// MCP paths
 	mcpPaths := cfg.GetMCPPaths()
 	for _, path := range mcpPaths {
-		mux.HandleFunc(path, buildProxyHandler(cfg, modifiers))
+		mux.HandleFunc(path, buildProxyHandler(cfg, modifiers, policyEngine))
 		registeredPaths[path] = true
 	}
 
 	// Register paths from PathMapping that haven't been registered yet
 	for path := range cfg.PathMapping {
 		if !registeredPaths[path] {
-			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers))
+			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers, policyEngine))
 			registeredPaths[path] = true
 		}
 	}
@@ -99,7 +115,7 @@ func NewRouter(cfg *config.Config, provider authz.Provider) http.Handler {
 	return mux
 }
 
-func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier) http.HandlerFunc {
+func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier, policyEngine authz.PolicyEngine) http.HandlerFunc {
 	// Parse the base URLs up front
 	authBase, err := url.Parse(cfg.AuthServerBaseURL)
 	if err != nil {
@@ -141,6 +157,10 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 		// Add CORS headers to all responses
 		addCORSHeaders(w, cfg, allowedOrigin, "")
 
+		versionRaw := r.Header.Get("MCP-Protocol-Version")
+		ver, err := time.Parse(constants.TimeLayout, versionRaw)
+		isLatestSpec := err == nil && !ver.Before(constants.SpecCutoverDate)
+
 		// Decide whether the request should go to the auth server or MCP
 		var targetURL *url.URL
 		isSSE := false
@@ -148,13 +168,29 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 		if isAuthPath(r.URL.Path) {
 			targetURL = authBase
 		} else if isMCPPath(r.URL.Path, cfg) {
-			// Validate JWT for MCP paths if required
-			// Placeholder for JWT validation logic
-			if err := util.ValidateJWT(r.Header.Get("Authorization")); err != nil {
-				logger.Warn("Unauthorized request to %s: %v", r.URL.Path, err)
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
+			if ssePaths[r.URL.Path] {
+				if err := authorizeSSE(w, r, isLatestSpec, cfg.ResourceIdentifier); err != nil {
+					http.Error(w, err.Error(), http.StatusUnauthorized)
+					return
+				}
+				isSSE = true
+			} else {
+				claims, err := authorizeMCP(w, r, isLatestSpec, cfg)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusUnauthorized)
+					return
+				}
+
+				if isLatestSpec {
+					scope := cfg.ScopesSupported[r.URL.Path]
+					pr := policyEngine.Evaluate(r, claims, scope)
+					if pr.Decision == authz.DecisionDeny {
+						http.Error(w, "Forbidden: "+pr.Message, http.StatusForbidden)
+						return
+					}
+				}
 			}
+
 			targetURL = mcpBase
 			if ssePaths[r.URL.Path] {
 				isSSE = true
@@ -214,7 +250,17 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 			},
 			ModifyResponse: func(resp *http.Response) error {
 				logger.Debug("Response from %s%s: %d", resp.Request.URL.Host, resp.Request.URL.Path, resp.StatusCode)
-				resp.Header.Del("Access-Control-Allow-Origin") // Avoid upstream conflicts
+				if resp.StatusCode == http.StatusUnauthorized {
+					resp.Header.Set(
+						"WWW-Authenticate",
+						fmt.Sprintf(
+							`Bearer resource_metadata="%s"`,
+							cfg.ResourceIdentifier+"/.well-known/oauth-protected-resource",
+						))
+					resp.Header.Set("Access-Control-Expose-Headers", "WWW-Authenticate")
+				}
+
+				resp.Header.Del("Access-Control-Allow-Origin")
 				return nil
 			},
 			ErrorHandler: func(rw http.ResponseWriter, req *http.Request, err error) {
@@ -236,7 +282,7 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 			w.Header().Set("X-Accel-Buffering", "no")
 			w.Header().Set("Cache-Control", "no-cache")
 			w.Header().Set("Connection", "keep-alive")
-
+			w.Header().Set("Content-Type", "text/event-stream")
 			// Keep SSE connections open
 			HandleSSE(w, r, rp)
 		} else {
@@ -246,6 +292,47 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 			rp.ServeHTTP(w, r.WithContext(ctx))
 		}
 	}
+}
+
+// Check if the request is for SSE handshake and authorize it
+func authorizeSSE(w http.ResponseWriter, r *http.Request, isLatestSpec bool, resourceID string) error {
+	h := r.Header.Get("Authorization")
+	if !strings.HasPrefix(h, "Bearer ") {
+		if isLatestSpec {
+			realm := resourceID + "/.well-known/oauth-protected-resource"
+			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata="%s"`, realm))
+			w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate")
+		}
+
+		return fmt.Errorf("missing bearer token")
+	}
+
+	return nil
+}
+
+// Handles both v1 (just signature) and v2 (aud + scope) flows
+func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg *config.Config) (*authz.TokenClaims, error) {
+	h := r.Header.Get("Authorization")
+	audience := cfg.ResourceIdentifier
+	if isLatestSpec {
+		scope := cfg.ScopesSupported[r.URL.Path]
+		claims, err := util.ValidateJWT(r.Header.Get("MCP-Protocol-Version"), h, audience, scope)
+		if err != nil {
+			realm := audience + "/.well-known/oauth-protected-resource"
+			w.Header().Set("WWW-Authenticate",
+				fmt.Sprintf(`Bearer realm="%s", error="insufficient_scope", scope="%s"`, realm, scope))
+			w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate")
+			return nil, err
+		}
+		return claims, nil
+	}
+
+	// v1: only check signature, then continue
+	if err := util.ValidateJWTOld(h); err != nil {
+		return nil, err
+	}
+
+	return &authz.TokenClaims{}, nil
 }
 
 func getAllowedOrigin(origin string, cfg *config.Config) string {
@@ -265,6 +352,7 @@ func getAllowedOrigin(origin string, cfg *config.Config) string {
 func addCORSHeaders(w http.ResponseWriter, cfg *config.Config, allowedOrigin, requestHeaders string) {
 	w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 	w.Header().Set("Access-Control-Allow-Methods", strings.Join(cfg.CORSConfig.AllowedMethods, ", "))
+	w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate")
 	if requestHeaders != "" {
 		w.Header().Set("Access-Control-Allow-Headers", requestHeaders)
 	} else {
@@ -283,6 +371,7 @@ func isAuthPath(path string) bool {
 		"/token":     true,
 		"/register":  true,
 		"/.well-known/oauth-authorization-server": true,
+		"/.well-known/oauth-protected-resource":   true,
 	}
 	if strings.HasPrefix(path, "/u/") {
 		return true
