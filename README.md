@@ -10,16 +10,33 @@ A lightweight authorization proxy for Model Context Protocol (MCP) servers that 
 
 ![Architecture Diagram](https://github.com/user-attachments/assets/41cf6723-c488-4860-8640-8fec45006f92)
 
-## What it Does
-
-Open MCP Auth Proxy sits between MCP clients and your MCP server to:
+## What it Does?
 
 - Intercept incoming requests
 - Validate authorization tokens
 - Offload authentication and authorization to OAuth-compliant Identity Providers
 - Support the MCP authorization protocol
 
-## Quick Start
+
+## 🚀 Features
+
+- **Dynamic Authorization** based on MCP Authorization Specification (v1 and v2).
+- **JWT Validation** (signature, audience, and scopes).
+- **Identity Provider Integration** (OAuth/OIDC via Asgardeo, Auth0, Keycloak).
+- **Protocol Version Negotiation** via `MCP-Protocol-Version` header.
+- **Comprehensive Authentication Feedback** via RFC-compliant challenges.
+- **Flexible Transport Modes**: SSE and stdio.
+
+## 📌 MCP Specification Verions
+
+| Version | Date                  | Behavior                                                                                                                                                                                                                                                                                                                                                                                   |
+| :------ | :-------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **v1**  | *before* 2025-03-26   | Only signature check of Bearer JWT on both `/sse` and `/message`<br> No scope or audience enforcement                                                                                                                                                                                                                                                                                   |
+| **v2**  | *on/after* 2025-03-26 | Read `MCP-Protocol-Version` from client header<br> SSE handshake returns `WWW-Authenticate: Bearer resource_metadata="…"`<br> `/message` enforces:<br>   1. `aud` claim == `ResourceIdentifier`<br>   2. `scope` claim contains per-path `requiredScope`<br>   3. PolicyEngine decision<br> Rich `WWW-Authenticate` on 401s<br> Serves `/​.well-known/oauth-protected-resource` JSON |
+
+> ⚠️ **Note:** MCP v2 support is available **only in SSE mode**. The stdio mode supports only v1.
+
+## 🛠️ Quick Start
 
 ### Prerequisites
 
@@ -73,7 +90,7 @@ Open MCP Auth Proxy sits between MCP clients and your MCP server to:
 
 3. Connect using an MCP client like [MCP Inspector](https://github.com/shashimalcse/inspector)(This is a temporary fork with fixes for authentication [issues](https://github.com/modelcontextprotocol/typescript-sdk/issues/257) in the original implementation)
 
-## Connect an Identity Provider
+## 🔒 Integrate an Identity Provider
 
 ### Asgardeo
 
@@ -94,6 +111,20 @@ asgardeo:
   org_name: "<org_name>"                      # Your Asgardeo org name
   client_id: "<client_id>"                    # Client ID of the M2M app
   client_secret: "<client_secret>"            # Client secret of the M2M app
+
+  # Only required if you are using the latest version of the MCP specification
+  resource_identifier: "http://localhost:8080" # URL of the MCP proxy server
+  authorization_servers:
+    - "https://example.idp.com" # Base URL of the identity provider
+  jwks_uri: "https://example.idp.com/.well-known/jwks.json"
+  bearer_methods_supported:
+    - header
+    - body
+    - query
+    # Protect the MCP endpoints with per-path scopes:
+  scopes_supported:
+    "/message": "mcp_proxy:message"
+    "/resources/list": "mcp_proxy:read"
 ```
 
 4. Start the proxy with Asgardeo integration:
@@ -107,7 +138,7 @@ asgardeo:
 - [Auth0](docs/integrations/Auth0.md)
 - [Keycloak](docs/integrations/keycloak.md)
 
-# Advanced Configuration
+# ⚙️ Advanced Configuration
 
 ### Transport Modes
 
@@ -173,7 +204,7 @@ The proxy will:
 - Handle all authorization requirements
 - Forward messages between clients and the server
 
-### Complete Configuration Reference
+### 📝 Complete Configuration Reference
 
 ```yaml
 # Common configuration
@@ -220,6 +251,18 @@ asgardeo:
   org_name: "<org_name>"
   client_id: "<client_id>"
   client_secret: "<client_secret>"
+  # Required according to the latest MCP specification
+  resource_identifier: "http://localhost:8080"
+  scopes_supported:
+    "/get-alerts": "mcp_proxy"
+    "/get-forecast": "mcp_proxy"
+  authorization_servers:
+    - "https://dev-3l9-ppfg.us.auth0.com"
+  jwks_uri: "https://dev-3l9-ppfg.us.auth0.com/.well-known/jwks.json"
+  bearer_methods_supported:
+    - header
+    - body
+    - query
 ```
 ## Build from Source
 
