@@ -92,12 +92,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 5. Build the main router
-	mux := proxy.NewRouter(cfg, provider)
+	// 5. (Optional) Build the policy engine
+	engine := &authz.DefaulPolicyEngine{}
+
+	// 6. Build the main router
+	mux := proxy.NewRouter(cfg, provider, engine)
 
 	listen_address := fmt.Sprintf(":%d", cfg.ListenPort)
 
-	// 6. Start the server
+	// 7. Start the server
 	srv := &http.Server{
 		Addr:    listen_address,
 		Handler: mux,
@@ -111,18 +114,18 @@ func main() {
 		}
 	}()
 
-	// 7. Wait for shutdown signal
+	// 8. Wait for shutdown signal
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop
 	logger.Info("Shutting down...")
 
-	// 8. First terminate subprocess if running
+	// 9. First terminate subprocess if running
 	if procManager != nil && procManager.IsRunning() {
 		procManager.Shutdown()
 	}
 
-	// 9. Then shutdown the server
+	// 10. Then shutdown the server
 	logger.Info("Shutting down HTTP server...")
 	shutdownCtx, cancel := proxy.NewShutdownContext(5 * time.Second)
 	defer cancel()
