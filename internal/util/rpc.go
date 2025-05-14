@@ -34,6 +34,5 @@ func ParseRPCRequest(r *http.Request) (*RPCEnvelope, error) {
 		return nil, err
 	}
 
-	logger.Info("JSON-RPC method = %q", env.Method)
 	return &env, nil
 }
