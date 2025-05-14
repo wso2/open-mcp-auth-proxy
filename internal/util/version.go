@@ -8,7 +8,7 @@ import (
 
 // This function checks if the given version date is after the spec cutover date
 func IsLatestSpec(versionDate time.Time, err error) bool {
-	return err == nil && !versionDate.Before(constants.SpecCutoverDate)
+	return err == nil && !versionDate.After(constants.SpecCutoverDate)
 }
 
 // This function parses a version string into a time.Time
