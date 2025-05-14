@@ -11,7 +11,6 @@ import (
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	"github.com/wso2/open-mcp-auth-proxy/internal/constants"
 	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
@@ -157,9 +156,10 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier,
 		// Add CORS headers to all responses
 		addCORSHeaders(w, cfg, allowedOrigin, "")
 
-		versionRaw := r.Header.Get("MCP-Protocol-Version")
-		ver, err := time.Parse(constants.TimeLayout, versionRaw)
-		isLatestSpec := err == nil && !ver.Before(constants.SpecCutoverDate)
+		// Check if the request is for the latest spec
+		specVersion := util.GetVersionWithDefault(r.Header.Get("MCP-Protocol-Version"))
+		ver, err := util.ParseVersionDate(specVersion)
+		isLatestSpec := util.IsLatestSpec(ver, err)
 
 		// Decide whether the request should go to the auth server or MCP
 		var targetURL *url.URL
@@ -311,35 +311,53 @@ func authorizeSSE(w http.ResponseWriter, r *http.Request, isLatestSpec bool, res
 
 // Handles both v1 (just signature) and v2 (aud + scope) flows
 func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg *config.Config) (*authz.TokenClaims, error) {
-	logger.Info("authorizeMCP")
-	h := r.Header.Get("Authorization")
-	audience := cfg.ResourceIdentifier
-	if isLatestSpec {
-		required := cfg.ScopesSupported[r.URL.Path]
-		claims, err := util.ValidateJWT(r.Header.Get("MCP-Protocol-Version"), h, audience, required)
-		logger.Info("claims: %v", claims)
-		logger.Info("err: %v", err)
-		if err != nil {
-			w.Header().Set(
-				"WWW-Authenticate",
-				fmt.Sprintf(
-					`Bearer realm="%s", error="insufficient_scope", scope="%s"`,
-					cfg.ResourceIdentifier+"/.well-known/oauth-protected-resource",
-					required,
-				),
-			)
-			w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate")
-			return nil, fmt.Errorf("forbidden — insufficient scope")
-		}
-		return claims, nil
-	}
-
-	// v1: only check signature, then continue
-	if err := util.ValidateJWTLegacy(h); err != nil {
+	// Parse JSON-RPC request if present
+	if env, err := util.ParseRPCRequest(r); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
 		return nil, err
+	} else if env != nil {
+		logger.Info("JSON-RPC method = %q", env.Method)
 	}
 
-	return &authz.TokenClaims{}, nil
+	authzHeader := r.Header.Get("Authorization")
+    if !strings.HasPrefix(authzHeader, "Bearer ") {
+        if isLatestSpec {
+            realm := cfg.ResourceIdentifier + "/.well-known/oauth-protected-resource"
+            w.Header().Set("WWW-Authenticate", fmt.Sprintf(
+                `Bearer resource_metadata=%q`, realm,
+            ))
+            w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate")
+        }
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return nil, fmt.Errorf("missing or invalid Authorization header")
+    }
+
+    requiredScope := ""
+    if isLatestSpec {
+        requiredScope = cfg.ScopesSupported[r.URL.Path]
+    }
+    claims, err := util.ValidateJWT(
+        isLatestSpec,
+        authzHeader,
+        cfg.Audience,
+        requiredScope,
+    )
+    if err != nil {
+        if isLatestSpec {
+            realm := cfg.ResourceIdentifier + "/.well-known/oauth-protected-resource"
+            w.Header().Set("WWW-Authenticate", fmt.Sprintf(
+                `Bearer realm=%q, error="insufficient_scope", scope=%q`,
+                realm, requiredScope,
+            ))
+            w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate")
+            http.Error(w, "Forbidden", http.StatusForbidden)
+        } else {
+            http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        }
+        return nil, err
+    }
+
+    return claims, nil
 }
 
 func getAllowedOrigin(origin string, cfg *config.Config) string {

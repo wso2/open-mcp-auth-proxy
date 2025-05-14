@@ -106,6 +106,7 @@ type Config struct {
 	Default  DefaultConfig  `yaml:"default"`
 
 	// Protected resource metadata
+	Audience               string            `yaml:"audience"`
 	ResourceIdentifier     string            `yaml:"resource_identifier"`
 	ScopesSupported        map[string]string `yaml:"scopes_supported"`
 	AuthorizationServers   []string          `yaml:"authorization_servers"`

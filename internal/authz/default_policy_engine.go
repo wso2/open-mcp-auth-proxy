@@ -1,20 +1,49 @@
 package authz
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 )
 
 type TokenClaims struct {
 	Scopes []string
 }
 
-type DefaulPolicyEngine struct{}
+type DefaultPolicyEngine struct{}
 
-func (d *DefaulPolicyEngine) Evaluate(r *http.Request, claims *TokenClaims, requiredScope string) PolicyResult {
-	for _, scope := range claims.Scopes {
-		if scope == requiredScope {
+// Evaluate and checks the token claims against one or more required scopes.
+func (d *DefaultPolicyEngine) Evaluate(
+	_ *http.Request,
+	claims *TokenClaims,
+	requiredScope string,
+) PolicyResult {
+	if strings.TrimSpace(requiredScope) == "" {
+		return PolicyResult{DecisionAllow, ""}
+	}
+
+	raw := strings.FieldsFunc(requiredScope, func(r rune) bool {
+		return r == ' ' || r == ','
+	})
+	want := make(map[string]struct{}, len(raw))
+	for _, s := range raw {
+		if s = strings.TrimSpace(s); s != "" {
+			want[s] = struct{}{}
+		}
+	}
+
+	for _, have := range claims.Scopes {
+		if _, ok := want[have]; ok {
 			return PolicyResult{DecisionAllow, ""}
 		}
 	}
-	return PolicyResult{DecisionDeny, "missing scope '" + requiredScope + "'"}
+
+	var list []string
+	for s := range want {
+		list = append(list, s)
+	}
+	return PolicyResult{
+		DecisionDeny,
+		fmt.Sprintf("missing required scope(s): %s", strings.Join(list, ", ")),
+	}
 }

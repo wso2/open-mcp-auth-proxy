@@ -93,7 +93,7 @@ func main() {
 	}
 
 	// 5. (Optional) Build the policy engine
-	engine := &authz.DefaulPolicyEngine{}
+	engine := &authz.DefaultPolicyEngine{}
 
 	// 6. Build the main router
 	mux := proxy.NewRouter(cfg, provider, engine)
