@@ -49,12 +49,14 @@ demo:
 
 # Protected resource metadata
 resource_identifier: http://localhost:3000
+audience: mcp_proxy
 scopes_supported:
-  - get-alerts
-  - get-forecast
+  "read:tools"
+  "read:resources"
+  "read:prompts"
 authorization_servers:
-  - https://idp.example.com
-jwks_uri: https://idp.example.com/.well-known/jwks.json
+  - https://api.asgardeo.io/t/acme/
+jwks_uri: https://api.asgardeo.io/t/acme/oauth2/jwks
 bearer_methods_supported:
   - header
   - body
