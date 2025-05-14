@@ -106,12 +106,12 @@ type Config struct {
 	Default  DefaultConfig  `yaml:"default"`
 
 	// Protected resource metadata
-	Audience               string            `yaml:"audience"`
-	ResourceIdentifier     string            `yaml:"resource_identifier"`
-	ScopesSupported        map[string]string `yaml:"scopes_supported"`
-	AuthorizationServers   []string          `yaml:"authorization_servers"`
-	JwksURI                string            `yaml:"jwks_uri,omitempty"`
-	BearerMethodsSupported []string          `yaml:"bearer_methods_supported,omitempty"`
+	Audience               string   `yaml:"audience"`
+	ResourceIdentifier     string   `yaml:"resource_identifier"`
+	ScopesSupported        any      `yaml:"scopes_supported"`
+	AuthorizationServers   []string `yaml:"authorization_servers"`
+	JwksURI                string   `yaml:"jwks_uri,omitempty"`
+	BearerMethodsSupported []string `yaml:"bearer_methods_supported,omitempty"`
 }
 
 // Validate checks if the config is valid based on transport mode

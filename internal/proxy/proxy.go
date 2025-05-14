@@ -175,19 +175,9 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier,
 				}
 				isSSE = true
 			} else {
-				claims, err := authorizeMCP(w, r, isLatestSpec, cfg)
-				if err != nil {
+				if err := authorizeMCP(w, r, isLatestSpec, cfg, policyEngine); err != nil {
 					http.Error(w, err.Error(), http.StatusForbidden)
 					return
-				}
-
-				if isLatestSpec {
-					scope := cfg.ScopesSupported[r.URL.Path]
-					pr := policyEngine.Evaluate(r, claims, scope)
-					if pr.Decision == authz.DecisionDeny {
-						http.Error(w, "Forbidden: "+pr.Message, http.StatusForbidden)
-						return
-					}
 				}
 			}
 
@@ -310,54 +300,54 @@ func authorizeSSE(w http.ResponseWriter, r *http.Request, isLatestSpec bool, res
 }
 
 // Handles both v1 (just signature) and v2 (aud + scope) flows
-func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg *config.Config) (*authz.TokenClaims, error) {
-	// Parse JSON-RPC request if present
-	if env, err := util.ParseRPCRequest(r); err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return nil, err
-	} else if env != nil {
-		logger.Info("JSON-RPC method = %q", env.Method)
+func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg *config.Config, policyEngine authz.PolicyEngine) error {
+	authzHeader := r.Header.Get("Authorization")
+	if !strings.HasPrefix(authzHeader, "Bearer ") {
+		if isLatestSpec {
+			realm := cfg.ResourceIdentifier + "/.well-known/oauth-protected-resource"
+			w.Header().Set("WWW-Authenticate", fmt.Sprintf(
+				`Bearer resource_metadata=%q`, realm,
+			))
+			w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate")
+		}
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return fmt.Errorf("missing or invalid Authorization header")
 	}
 
-	authzHeader := r.Header.Get("Authorization")
-    if !strings.HasPrefix(authzHeader, "Bearer ") {
-        if isLatestSpec {
-            realm := cfg.ResourceIdentifier + "/.well-known/oauth-protected-resource"
-            w.Header().Set("WWW-Authenticate", fmt.Sprintf(
-                `Bearer resource_metadata=%q`, realm,
-            ))
-            w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate")
-        }
-        http.Error(w, "Unauthorized", http.StatusUnauthorized)
-        return nil, fmt.Errorf("missing or invalid Authorization header")
-    }
+	claims, err := util.ValidateJWT(isLatestSpec, authzHeader, cfg.Audience)
+	if err != nil {
+		if isLatestSpec {
+			realm := cfg.ResourceIdentifier + "/.well-known/oauth-protected-resource"
+			w.Header().Set("WWW-Authenticate", fmt.Sprintf(err.Error(),
+				`Bearer realm=%q`,
+				realm,
+			))
+			w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate")
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		} else {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		}
+		return err
+	}
 
-    requiredScope := ""
-    if isLatestSpec {
-        requiredScope = cfg.ScopesSupported[r.URL.Path]
-    }
-    claims, err := util.ValidateJWT(
-        isLatestSpec,
-        authzHeader,
-        cfg.Audience,
-        requiredScope,
-    )
-    if err != nil {
-        if isLatestSpec {
-            realm := cfg.ResourceIdentifier + "/.well-known/oauth-protected-resource"
-            w.Header().Set("WWW-Authenticate", fmt.Sprintf(
-                `Bearer realm=%q, error="insufficient_scope", scope=%q`,
-                realm, requiredScope,
-            ))
-            w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate")
-            http.Error(w, "Forbidden", http.StatusForbidden)
-        } else {
-            http.Error(w, "Unauthorized", http.StatusUnauthorized)
-        }
-        return nil, err
-    }
+	if isLatestSpec {
+		env, err := util.ParseRPCRequest(r)
+		if err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return err
+		}
+		requiredScopes := util.GetRequiredScopes(cfg, env.Method)
+		if len(requiredScopes) == 0 {
+			return nil
+		}
+		pr := policyEngine.Evaluate(r, claims, requiredScopes)
+		if pr.Decision == authz.DecisionDeny {
+			http.Error(w, "Forbidden: "+pr.Message, http.StatusForbidden)
+			return fmt.Errorf("forbidden — %s", pr.Message)
+		}
+	}
 
-    return claims, nil
+	return nil
 }
 
 func getAllowedOrigin(origin string, cfg *config.Config) string {

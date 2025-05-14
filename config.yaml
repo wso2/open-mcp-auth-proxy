@@ -51,9 +51,9 @@ demo:
 resource_identifier: http://localhost:3000
 audience: mcp_proxy
 scopes_supported:
-  "read:tools"
-  "read:resources"
-  "read:prompts"
+  - "tools":"read:tools"
+  - "resources":"read:resources"
+  - "prompts":"read:prompts"
 authorization_servers:
   - https://api.asgardeo.io/t/acme/
 jwks_uri: https://api.asgardeo.io/t/acme/oauth2/jwks

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 type TokenClaims struct {
@@ -16,30 +18,42 @@ type DefaultPolicyEngine struct{}
 func (d *DefaultPolicyEngine) Evaluate(
 	_ *http.Request,
 	claims *TokenClaims,
-	requiredScope string,
+	requiredScopes any,
 ) PolicyResult {
-	if strings.TrimSpace(requiredScope) == "" {
+
+	logger.Info("Required scopes: %v", requiredScopes)
+
+	var scopeStr string
+	switch v := requiredScopes.(type) {
+	case string:
+		scopeStr = v
+	case []string:
+		scopeStr = strings.Join(v, " ")
+	}
+
+	if strings.TrimSpace(scopeStr) == "" {
 		return PolicyResult{DecisionAllow, ""}
 	}
 
-	raw := strings.FieldsFunc(requiredScope, func(r rune) bool {
+	scopes := strings.FieldsFunc(scopeStr, func(r rune) bool {
 		return r == ' ' || r == ','
 	})
-	want := make(map[string]struct{}, len(raw))
-	for _, s := range raw {
+	required := make(map[string]struct{}, len(scopes))
+	for _, s := range scopes {
 		if s = strings.TrimSpace(s); s != "" {
-			want[s] = struct{}{}
+			required[s] = struct{}{}
 		}
 	}
 
-	for _, have := range claims.Scopes {
-		if _, ok := want[have]; ok {
+	logger.Info("Token scopes: %v", claims.Scopes)
+	for _, tokenScope := range claims.Scopes {
+		if _, ok := required[tokenScope]; ok {
 			return PolicyResult{DecisionAllow, ""}
 		}
 	}
 
 	var list []string
-	for s := range want {
+	for s := range required {
 		list = append(list, s)
 	}
 	return PolicyResult{
