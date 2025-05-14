@@ -8,12 +8,10 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
-	"github.com/wso2/open-mcp-auth-proxy/internal/constants"
-	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 type TokenClaims struct {
@@ -87,7 +85,7 @@ func parseRSAPublicKey(nStr, eStr string) (*rsa.PublicKey, error) {
 //   - audience:      the resource identifier to check "aud" against
 //   - requiredScope: the single scope required (empty ⇒ skip scope check)
 func ValidateJWT(
-	versionHeader, authHeader, audience, requiredScope string,
+	isLatestSpec bool, authHeader, audience, requiredScope string,
 ) (*authz.TokenClaims, error) {
 	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 	if tokenStr == "" {
@@ -96,16 +94,19 @@ func ValidateJWT(
 
 	// 2) parse & verify signature
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		kid, _ := token.Header["kid"].(string)
-		pk, ok := publicKeys[kid]
-		if !ok {
-			return nil, fmt.Errorf("unknown kid %q", kid)
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return pk, nil
+		kid, ok := token.Header["kid"].(string)
+		if !ok {
+			return nil, errors.New("kid header not found")
+		}
+		key, ok := publicKeys[kid]
+		if !ok {
+			return nil, fmt.Errorf("key not found for kid: %s", kid)
+		}
+		return key, nil
 	})
-
-	logger.Info("token: %v", token)
-	logger.Info("err: %v", err)
 
 	if err != nil {
 		return nil, fmt.Errorf("invalid token: %w", err)
@@ -120,15 +121,8 @@ func ValidateJWT(
 		return nil, errors.New("unexpected claim type")
 	}
 
-	// parse version date
-	verDate, err := time.Parse("2006-01-02", versionHeader)
-	if err != nil {
-		// if unparsable or missing, assume _old_ spec
-		verDate = time.Time{} // zero time ⇒ before cutover
-	}
-
 	// if older than cutover, skip audience+scope
-	if verDate.Before(constants.SpecCutoverDate) {
+	if !isLatestSpec {
 		return &authz.TokenClaims{Scopes: nil}, nil
 	}
 
@@ -178,24 +172,4 @@ func ValidateJWT(
 		}
 	}
 	return nil, fmt.Errorf("insufficient scope: %q not in %v", requiredScope, scopes)
-}
-
-// Performs basic JWT validation
-func ValidateJWTLegacy(authHeader string) error {
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	_, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		kid, ok := token.Header["kid"].(string)
-		if !ok {
-			return nil, errors.New("kid header not found")
-		}
-		key, ok := publicKeys[kid]
-		if !ok {
-			return nil, fmt.Errorf("key not found for kid: %s", kid)
-		}
-		return key, nil
-	})
-	return err
 }

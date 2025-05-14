@@ -99,6 +99,7 @@ func (p *defaultProvider) ProtectedResourceMetadataHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		meta := map[string]interface{}{
+			"audience": p.cfg.Audience,
 			"resource": p.cfg.ResourceIdentifier,
 			"scopes_supported": p.cfg.ScopesSupported,
 			"authorization_servers": p.cfg.AuthorizationServers,
