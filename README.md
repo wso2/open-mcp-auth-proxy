@@ -20,7 +20,7 @@ A lightweight authorization proxy for Model Context Protocol (MCP) servers that 
 
 ## 🚀 Features
 
-- **Dynamic Authorization** based on MCP Authorization Specification (v1 and v2).
+- **Dynamic Authorization** based on MCP Authorization Specification.
 - **JWT Validation** (signature, audience, and scopes).
 - **Identity Provider Integration** (OAuth/OIDC via Asgardeo, Auth0, Keycloak).
 - **Protocol Version Negotiation** via `MCP-Protocol-Version` header.
@@ -29,10 +29,10 @@ A lightweight authorization proxy for Model Context Protocol (MCP) servers that 
 
 ## 📌 MCP Specification Verions
 
-| Version | Date                  | Behavior                                                                                                                                                                                                                                                                                                                                                                                   |
-| :------ | :-------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **v1**  | *before* 2025-03-26   | Only signature check of Bearer JWT on both `/sse` and `/message`<br> No scope or audience enforcement                                                                                                                                                                                                                                                                                   |
-| **v2**  | *on/after* 2025-03-26 | Read `MCP-Protocol-Version` from client header<br> SSE handshake returns `WWW-Authenticate: Bearer resource_metadata="…"`<br> `/message` enforces:<br>   1. `aud` claim == `ResourceIdentifier`<br>   2. `scope` claim contains per-path `requiredScope`<br>   3. PolicyEngine decision<br> Rich `WWW-Authenticate` on 401s<br> Serves `/​.well-known/oauth-protected-resource` JSON |
+| Version                  | Behavior                                                                                                                                                                                                                                                                                                                                                                                   |
+| :-------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2025-03-26   | Only signature check of Bearer JWT on both `/sse` and `/message`<br> No scope or audience enforcement                                                                                                                                                                                                                                                                                   |
+| Latest(draft) | Read `MCP-Protocol-Version` from client header<br> SSE handshake returns `WWW-Authenticate: Bearer resource_metadata="…"`<br> `/message` enforces:<br>   1. `aud` claim == `ResourceIdentifier`<br>   2. `scope` claim contains per-path `requiredScope`<br>   3. PolicyEngine decision<br> Rich `WWW-Authenticate` on 401s<br> Serves `/​.well-known/oauth-protected-resource` JSON |
 
 > ⚠️ **Note:** MCP v2 support is available **only in SSE mode**. The stdio mode supports only v1.
 
@@ -112,7 +112,6 @@ asgardeo:
   client_id: "<client_id>"                    # Client ID of the M2M app
   client_secret: "<client_secret>"            # Client secret of the M2M app
 
-  # Only required if you are using the latest version of the MCP specification
   resource_identifier: "http://localhost:8080" # URL of the MCP proxy server
   authorization_servers:
     - "https://example.idp.com" # Base URL of the identity provider
@@ -251,14 +250,14 @@ asgardeo:
   org_name: "<org_name>"
   client_id: "<client_id>"
   client_secret: "<client_secret>"
-  # Required according to the latest MCP specification
   resource_identifier: "http://localhost:8080"
-  scopes_supported:
-    "/get-alerts": "mcp_proxy"
-    "/get-forecast": "mcp_proxy"
+  scopes_supported: # Define the required scopes for the MCP server
+    "tools": "read:tools"
+    "resources": "read:resources"
+  audience: "<audience_value>"
   authorization_servers:
-    - "https://dev-3l9-ppfg.us.auth0.com"
-  jwks_uri: "https://dev-3l9-ppfg.us.auth0.com/.well-known/jwks.json"
+    - "https://api.asgardeo.io/t/acme"
+  jwks_uri: "https://api.asgardeo.io/t/acme/oauth2/jwks"
   bearer_methods_supported:
     - header
     - body
