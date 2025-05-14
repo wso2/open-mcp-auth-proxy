@@ -363,3 +363,23 @@ func randomString(n int) string {
 	}
 	return string(b)
 }
+
+func (p *asgardeoProvider) ProtectedResourceMetadataHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		meta := map[string]interface{}{
+			"resource":              p.cfg.ResourceIdentifier,
+			"scopes_supported":      p.cfg.ScopesSupported,
+			"authorization_servers": p.cfg.AuthorizationServers,
+		}
+		if p.cfg.JwksURI != "" {
+			meta["jwks_uri"] = p.cfg.JwksURI
+		}
+		if len(p.cfg.BearerMethodsSupported) > 0 {
+			meta["bearer_methods_supported"] = p.cfg.BearerMethodsSupported
+		}
+		if err := json.NewEncoder(w).Encode(meta); err != nil {
+			http.Error(w, "failed to encode metadata", http.StatusInternalServerError)
+		}
+	}
+}

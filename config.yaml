@@ -46,3 +46,16 @@ demo:
   org_name: "openmcpauthdemo"
   client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
   client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"
+
+# Protected resource metadata
+resource_identifier: http://localhost:3000
+scopes_supported:
+  - get-alerts
+  - get-forecast
+authorization_servers:
+  - https://idp.example.com
+jwks_uri: https://idp.example.com/.well-known/jwks.json
+bearer_methods_supported:
+  - header
+  - body
+  - query
