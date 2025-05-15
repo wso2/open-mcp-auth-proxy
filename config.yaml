@@ -45,3 +45,19 @@ demo:
   org_name: "openmcpauthdemo"
   client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
   client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"
+
+# Protected resource metadata
+resource_identifier: http://localhost:3000
+audience: mcp_proxy
+scopes_supported:
+  - "tools":"read:tools"
+  - "resources":"read:resources"
+  - "prompts":"read:prompts"
+authorization_servers:
+  - https://api.asgardeo.io/t/acme/
+jwks_uri: https://api.asgardeo.io/t/acme/oauth2/jwks
+bearer_methods_supported:
+  - header
+  - body
+  - query
+  
