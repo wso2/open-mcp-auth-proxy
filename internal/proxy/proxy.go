@@ -11,7 +11,7 @@ import (
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
 
