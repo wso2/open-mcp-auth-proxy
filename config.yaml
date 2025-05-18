@@ -60,4 +60,3 @@ bearer_methods_supported:
   - header
   - body
   - query
-  

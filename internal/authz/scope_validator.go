@@ -20,9 +20,6 @@ func (d *ScopeValidator) ValidateAccess(
 	claims *TokenClaims,
 	requiredScopes any,
 ) AccessControlResult {
-
-	logger.Info("Required scopes: %v", requiredScopes)
-
 	var scopeStr string
 	switch v := requiredScopes.(type) {
 	case string:
@@ -45,7 +42,6 @@ func (d *ScopeValidator) ValidateAccess(
 		}
 	}
 
-	logger.Info("Token scopes: %v", claims.Scopes)
 	for _, tokenScope := range claims.Scopes {
 		if _, ok := required[tokenScope]; ok {
 			return AccessControlResult{DecisionAllow, ""}
