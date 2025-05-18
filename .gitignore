@@ -36,3 +36,7 @@ coverage.html
 
 # IDE files
 .vscode
+
+# node modules
+node_modules
+openmcpauthproxy
