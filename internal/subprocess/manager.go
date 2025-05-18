@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
-	"strings"
-	"runtime"
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 // Manager handles starting and graceful shutdown of subprocesses
@@ -32,39 +32,39 @@ func NewManager() *Manager {
 
 // EnsureDependenciesAvailable checks and installs required package executors
 func EnsureDependenciesAvailable(command string) error {
-    // Always ensure npx is available regardless of the command
-    if _, err := exec.LookPath("npx"); err != nil {
-        // npx is not available, check if npm is installed
-        if _, err := exec.LookPath("npm"); err != nil {
-            return fmt.Errorf("npx not found and npm not available; please install Node.js from https://nodejs.org/")
-        }
-        
-        // Try to install npx using npm
-        logger.Info("npx not found, attempting to install...")
-        var cmd *exec.Cmd
-        if runtime.GOOS == "windows" {
-            cmd = exec.Command("npm.cmd", "install", "-g", "npx")
-        } else {
-            cmd = exec.Command("npm", "install", "-g", "npx")
-        }
-        cmd.Stdout = os.Stdout
-        cmd.Stderr = os.Stderr
-        
-        if err := cmd.Run(); err != nil {
-            return fmt.Errorf("failed to install npx: %w", err)
-        }
-        
-        logger.Info("npx installed successfully")
-    }
-    
-    // Check if uv is needed based on the command
-    if strings.Contains(command, "uv ") {
-        if _, err := exec.LookPath("uv"); err != nil {
-            return fmt.Errorf("command requires uv but it's not installed; please install it following instructions at https://github.com/astral-sh/uv")
-        }
-    }
-    
-    return nil
+	// Always ensure npx is available regardless of the command
+	if _, err := exec.LookPath("npx"); err != nil {
+		// npx is not available, check if npm is installed
+		if _, err := exec.LookPath("npm"); err != nil {
+			return fmt.Errorf("npx not found and npm not available; please install Node.js from https://nodejs.org/")
+		}
+
+		// Try to install npx using npm
+		logger.Info("npx not found, attempting to install...")
+		var cmd *exec.Cmd
+		if runtime.GOOS == "windows" {
+			cmd = exec.Command("npm.cmd", "install", "-g", "npx")
+		} else {
+			cmd = exec.Command("npm", "install", "-g", "npx")
+		}
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to install npx: %w", err)
+		}
+
+		logger.Info("npx installed successfully")
+	}
+
+	// Check if uv is needed based on the command
+	if strings.Contains(command, "uv ") {
+		if _, err := exec.LookPath("uv"); err != nil {
+			return fmt.Errorf("command requires uv but it's not installed; please install it following instructions at https://github.com/astral-sh/uv")
+		}
+	}
+
+	return nil
 }
 
 // SetShutdownDelay sets the maximum time to wait for graceful shutdown
@@ -168,7 +168,7 @@ func (m *Manager) IsRunning() bool {
 // Shutdown gracefully terminates the subprocess
 func (m *Manager) Shutdown() {
 	m.mutex.Lock()
-	processToTerminate := m.process           // Local copy of the process reference
+	processToTerminate := m.process // Local copy of the process reference
 	processGroupToTerminate := m.processGroup
 	m.mutex.Unlock()
 
