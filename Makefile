@@ -21,12 +21,12 @@ BUILD_OPTS := -v
 # Set test options
 TEST_OPTS := -v -race
 
-.PHONY: all clean test fmt lint vet coverage help
+.PHONY: all clean test fmt lint vet coverage help build-windows
 
 # Default target
-all: lint test build-linux build-linux-arm build-darwin
+all: lint test build-linux build-linux-arm build-darwin build-windows
 
-build: clean test build-linux build-linux-arm build-darwin
+build: clean test build-linux build-linux-arm build-darwin build-windows
 
 build-linux:
 	mkdir -p $(BUILD_DIR)/linux
@@ -45,6 +45,12 @@ build-darwin:
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -x -ldflags "-X main.version=$(BUILD_VERSION)" \
 	-o $(BUILD_DIR)/darwin/openmcpauthproxy $(PROJECT_ROOT)/cmd/proxy
 	cp config.yaml $(BUILD_DIR)/darwin
+
+build-windows:
+	mkdir -p $(BUILD_DIR)/windows
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -x -ldflags "-X main.version=$(BUILD_VERSION)" \
+	-o $(BUILD_DIR)/windows/openmcpauthproxy.exe ./cmd/proxy
+	cp config.yaml $(BUILD_DIR)/windows
 
 # Clean build artifacts
 clean:
