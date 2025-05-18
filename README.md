@@ -10,7 +10,7 @@ A lightweight authorization proxy for Model Context Protocol (MCP) servers that 
 
 ![Architecture Diagram](https://github.com/user-attachments/assets/41cf6723-c488-4860-8640-8fec45006f92)
 
-## What it Does?
+## 🛡️ What it Does?
 
 - Intercept incoming requests
 - Validate authorization tokens
@@ -112,18 +112,18 @@ asgardeo:
   client_id: "<client_id>"                    # Client ID of the M2M app
   client_secret: "<client_secret>"            # Client secret of the M2M app
 
-  resource_identifier: "http://localhost:8080" # URL of the MCP proxy server
+  resource_identifier: "http://localhost:8080"
+  scopes_supported:
+    - "read:tools"
+    - "read:resources"
+  audience: "<audience_value>"
   authorization_servers:
-    - "https://example.idp.com" # Base URL of the identity provider
-  jwks_uri: "https://example.idp.com/.well-known/jwks.json"
+    - "https://api.asgardeo.io/t/acme"
+  jwks_uri: "https://api.asgardeo.io/t/acme/oauth2/jwks"
   bearer_methods_supported:
     - header
     - body
     - query
-    # Protect the MCP endpoints with per-path scopes:
-  scopes_supported:
-    "/message": "mcp_proxy:message"
-    "/resources/list": "mcp_proxy:read"
 ```
 
 4. Start the proxy with Asgardeo integration:
@@ -251,9 +251,9 @@ asgardeo:
   client_id: "<client_id>"
   client_secret: "<client_secret>"
   resource_identifier: "http://localhost:8080"
-  scopes_supported: # Define the required scopes for the MCP server
-    "tools": "read:tools"
-    "resources": "read:resources"
+  scopes_supported:
+    - "read:tools"
+    - "read:resources"
   audience: "<audience_value>"
   authorization_servers:
     - "https://api.asgardeo.io/t/acme"
