@@ -18,7 +18,7 @@ import (
 // NewRouter builds an http.ServeMux that routes
 // * /authorize, /token, /register, /.well-known to the provider or proxy
 // * MCP paths to the MCP server, etc.
-func NewRouter(cfg *config.Config, provider authz.Provider, policyEngine authz.PolicyEngine) http.Handler {
+func NewRouter(cfg *config.Config, provider authz.Provider, accessController authz.AccessControl) http.Handler {
 	mux := http.NewServeMux()
 
 	modifiers := map[string]RequestModifier{
@@ -56,20 +56,6 @@ func NewRouter(cfg *config.Config, provider authz.Provider, policyEngine authz.P
 				defaultPaths = append(defaultPaths, "/.well-known/oauth-authorization-server")
 			}
 
-			mux.HandleFunc("/.well-known/oauth-protected-resource", func(w http.ResponseWriter, r *http.Request) {
-				origin := r.Header.Get("Origin")
-				allowed := getAllowedOrigin(origin, cfg)
-				if r.Method == http.MethodOptions {
-					addCORSHeaders(w, cfg, allowed, r.Header.Get("Access-Control-Request-Headers"))
-					w.WriteHeader(http.StatusNoContent)
-					return
-				}
-
-				addCORSHeaders(w, cfg, allowed, "")
-				provider.ProtectedResourceMetadataHandler()(w, r)
-			})
-			registeredPaths["/.well-known/oauth-protected-resource"] = true
-
 			defaultPaths = append(defaultPaths, "/authorize")
 			defaultPaths = append(defaultPaths, "/token")
 			defaultPaths = append(defaultPaths, "/register")
@@ -77,6 +63,20 @@ func NewRouter(cfg *config.Config, provider authz.Provider, policyEngine authz.P
 			defaultPaths = []string{"/authorize", "/token", "/register", "/.well-known/oauth-authorization-server"}
 		}
 	}
+
+	mux.HandleFunc("/.well-known/oauth-protected-resource", func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		allowed := getAllowedOrigin(origin, cfg)
+		if r.Method == http.MethodOptions {
+			addCORSHeaders(w, cfg, allowed, r.Header.Get("Access-Control-Request-Headers"))
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		addCORSHeaders(w, cfg, allowed, "")
+		provider.ProtectedResourceMetadataHandler()(w, r)
+	})
+	registeredPaths["/.well-known/oauth-protected-resource"] = true
 
 	// Remove duplicates from defaultPaths
 	uniquePaths := make(map[string]bool)
@@ -91,7 +91,7 @@ func NewRouter(cfg *config.Config, provider authz.Provider, policyEngine authz.P
 
 	for _, path := range defaultPaths {
 		if !registeredPaths[path] {
-			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers, policyEngine))
+			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers, accessController))
 			registeredPaths[path] = true
 		}
 	}
@@ -99,14 +99,14 @@ func NewRouter(cfg *config.Config, provider authz.Provider, policyEngine authz.P
 	// MCP paths
 	mcpPaths := cfg.GetMCPPaths()
 	for _, path := range mcpPaths {
-		mux.HandleFunc(path, buildProxyHandler(cfg, modifiers, policyEngine))
+		mux.HandleFunc(path, buildProxyHandler(cfg, modifiers, accessController))
 		registeredPaths[path] = true
 	}
 
 	// Register paths from PathMapping that haven't been registered yet
 	for path := range cfg.PathMapping {
 		if !registeredPaths[path] {
-			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers, policyEngine))
+			mux.HandleFunc(path, buildProxyHandler(cfg, modifiers, accessController))
 			registeredPaths[path] = true
 		}
 	}
@@ -114,7 +114,7 @@ func NewRouter(cfg *config.Config, provider authz.Provider, policyEngine authz.P
 	return mux
 }
 
-func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier, policyEngine authz.PolicyEngine) http.HandlerFunc {
+func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier, accessController authz.AccessControl) http.HandlerFunc {
 	// Parse the base URLs up front
 	authBase, err := url.Parse(cfg.AuthServerBaseURL)
 	if err != nil {
@@ -175,7 +175,7 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier,
 				}
 				isSSE = true
 			} else {
-				if err := authorizeMCP(w, r, isLatestSpec, cfg, policyEngine); err != nil {
+				if err := authorizeMCP(w, r, isLatestSpec, cfg, accessController); err != nil {
 					http.Error(w, err.Error(), http.StatusForbidden)
 					return
 				}
@@ -300,7 +300,7 @@ func authorizeSSE(w http.ResponseWriter, r *http.Request, isLatestSpec bool, res
 }
 
 // Handles both v1 (just signature) and v2 (aud + scope) flows
-func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg *config.Config, policyEngine authz.PolicyEngine) error {
+func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg *config.Config, accessController authz.AccessControl) error {
 	authzHeader := r.Header.Get("Authorization")
 	if !strings.HasPrefix(authzHeader, "Bearer ") {
 		if isLatestSpec {
@@ -340,7 +340,7 @@ func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg
 		if len(requiredScopes) == 0 {
 			return nil
 		}
-		pr := policyEngine.Evaluate(r, claims, requiredScopes)
+		pr := accessController.ValidateAccess(r, claims, requiredScopes)
 		if pr.Decision == authz.DecisionDeny {
 			http.Error(w, "Forbidden: "+pr.Message, http.StatusForbidden)
 			return fmt.Errorf("forbidden — %s", pr.Message)

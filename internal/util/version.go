@@ -19,7 +19,8 @@ func ParseVersionDate(version string) (time.Time, error) {
 // This function returns the version string, using the cutover date if empty
 func GetVersionWithDefault(version string) string {
 	if version == "" {
-		return constants.SpecCutoverDate.Format("2006-01-02")
+		defaultTime, _ := time.Parse(constants.TimeLayout, "2025-05-15")
+		return defaultTime.Format(constants.TimeLayout)
 	}
 	return version
 }
