@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-
-	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 type TokenClaims struct {
