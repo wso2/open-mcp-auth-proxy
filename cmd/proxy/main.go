@@ -92,11 +92,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 5. (Optional) Build the policy engine
-	engine := &authz.DefaultPolicyEngine{}
+	// 5. (Optional) Build the access controler
+	accessController := &authz.ScopeValidator{}
 
 	// 6. Build the main router
-	mux := proxy.NewRouter(cfg, provider, engine)
+	mux := proxy.NewRouter(cfg, provider, accessController)
 
 	listen_address := fmt.Sprintf(":%d", cfg.ListenPort)
 

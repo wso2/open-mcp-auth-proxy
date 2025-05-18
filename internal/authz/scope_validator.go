@@ -12,14 +12,14 @@ type TokenClaims struct {
 	Scopes []string
 }
 
-type DefaultPolicyEngine struct{}
+type ScopeValidator struct{}
 
 // Evaluate and checks the token claims against one or more required scopes.
-func (d *DefaultPolicyEngine) Evaluate(
+func (d *ScopeValidator) ValidateAccess(
 	_ *http.Request,
 	claims *TokenClaims,
 	requiredScopes any,
-) PolicyResult {
+) AccessControlResult {
 
 	logger.Info("Required scopes: %v", requiredScopes)
 
@@ -32,7 +32,7 @@ func (d *DefaultPolicyEngine) Evaluate(
 	}
 
 	if strings.TrimSpace(scopeStr) == "" {
-		return PolicyResult{DecisionAllow, ""}
+		return AccessControlResult{DecisionAllow, ""}
 	}
 
 	scopes := strings.FieldsFunc(scopeStr, func(r rune) bool {
@@ -48,7 +48,7 @@ func (d *DefaultPolicyEngine) Evaluate(
 	logger.Info("Token scopes: %v", claims.Scopes)
 	for _, tokenScope := range claims.Scopes {
 		if _, ok := required[tokenScope]; ok {
-			return PolicyResult{DecisionAllow, ""}
+			return AccessControlResult{DecisionAllow, ""}
 		}
 	}
 
@@ -56,7 +56,7 @@ func (d *DefaultPolicyEngine) Evaluate(
 	for s := range required {
 		list = append(list, s)
 	}
-	return PolicyResult{
+	return AccessControlResult{
 		DecisionDeny,
 		fmt.Sprintf("missing required scope(s): %s", strings.Join(list, ", ")),
 	}
