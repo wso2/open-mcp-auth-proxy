@@ -101,108 +101,6 @@ asgardeo:
 - [Auth0](docs/integrations/Auth0.md)
 - [Keycloak](docs/integrations/keycloak.md)
 
-## Build from Source
-
-### Prerequisites for Building
-
-* Go 1.20 or higher
-* Git
-* Make (for Linux/macOS builds)
-
-### Building on Linux/macOS
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/wso2/open-mcp-auth-proxy
-   cd open-mcp-auth-proxy
-   ```
-
-2. Install dependencies:
-   ```bash
-   go get -v -t -d ./...
-   ```
-
-3. Build for your platform:
-   ```bash
-   # Build for all platforms
-   make all
-   
-   # Or build for a specific platform
-   make build-linux   # For Linux
-   make build-darwin  # For macOS
-   make build-linux-arm # For ARM-based Linux
-   make build-windows # For Windows
-   ```
-
-4. Find your build in the `build` directory:
-   ```bash
-   # For Linux
-   ./build/linux/openmcpauthproxy --demo
-   
-   # For macOS
-   ./build/darwin/openmcpauthproxy --demo
-   ```
-
-### Building on Windows
-
-1. Clone the repository:
-   ```powershell
-   git clone https://github.com/wso2/open-mcp-auth-proxy
-   cd open-mcp-auth-proxy
-   ```
-
-2. Install dependencies:
-   ```powershell
-   go get -v -t -d ./...
-   ```
-
-3. Option 1: Build using Make if you have it installed:
-   ```powershell
-   make build-windows
-   ```
-
-   Option 2: Build manually without Make:
-   ```powershell
-   mkdir -p build\windows
-   go build -o build\windows\openmcpauthproxy.exe .\cmd\proxy
-   copy config.yaml build\windows\
-   ```
-
-4. Run the built application:
-   ```powershell
-   cd build\windows
-   .\openmcpauthproxy.exe --demo
-   ```
-
-### Starting the Proxy on Windows
-
-1. Open Command Prompt or PowerShell
-2. Navigate to the build directory:
-   ```powershell
-   cd build\windows
-   ```
-
-3. Run the executable with your desired options:
-   ```powershell
-   # Start in demo mode (using Asgardeo sandbox)
-   openmcpauthproxy.exe --demo
-   
-   # Start with Asgardeo integration
-   openmcpauthproxy.exe --asgardeo
-   
-   # Start in stdio mode
-   openmcpauthproxy.exe --demo --stdio
-   
-   # Enable debug logging
-   openmcpauthproxy.exe --demo --debug
-   
-   # See all available options
-   openmcpauthproxy.exe --help
-   ```
-
-4. The proxy will start and display messages indicating it's running
-5. To stop the proxy, press `Ctrl+C` in the command window
-
 # Advanced Configuration
 
 ### Transport Modes
@@ -317,3 +215,104 @@ asgardeo:
   client_id: "<client_id>"
   client_secret: "<client_secret>"
 ```
+## Build from Source
+
+### Prerequisites for Building
+
+* Go 1.20 or higher
+* Git
+* Make (for Linux/macOS builds)
+
+### Building on Linux/macOS
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/wso2/open-mcp-auth-proxy
+   cd open-mcp-auth-proxy
+   ```
+
+2. Install dependencies:
+   ```bash
+   go get -v -t -d ./...
+   ```
+
+3. Build for your platform:
+   ```bash
+   # Build for all platforms
+   make all
+   
+   # Or build for a specific platform
+   make build-linux   # For Linux
+   make build-darwin  # For macOS
+   make build-linux-arm # For ARM-based Linux
+   make build-windows # For Windows
+   ```
+
+4. Find your build in the `build` directory:
+   ```bash
+   # For Linux
+   ./build/linux/openmcpauthproxy --demo
+   
+   # For macOS
+   ./build/darwin/openmcpauthproxy --demo
+   ```
+
+### Building on Windows
+
+1. Clone the repository:
+   ```powershell
+   git clone https://github.com/wso2/open-mcp-auth-proxy
+   cd open-mcp-auth-proxy
+   ```
+
+2. Install dependencies:
+   ```powershell
+   go get -v -t -d ./...
+   ```
+
+3. Option 1: Build using Make if you have it installed:
+   ```powershell
+   make build-windows
+   ```
+
+   Option 2: Build manually without Make:
+   ```powershell
+   mkdir -p build\windows
+   go build -o build\windows\openmcpauthproxy.exe .\cmd\proxy
+   copy config.yaml build\windows\
+   ```
+
+4. Run the built application:
+   ```powershell
+   cd build\windows
+   .\openmcpauthproxy.exe --demo
+   ```
+
+### Starting the Proxy on Windows
+
+1. Open Command Prompt or PowerShell
+2. Navigate to the build directory:
+   ```powershell
+   cd build\windows
+   ```
+
+3. Run the executable with your desired options:
+   ```powershell
+   # Start in demo mode (using Asgardeo sandbox)
+   openmcpauthproxy.exe --demo
+   
+   # Start with Asgardeo integration
+   openmcpauthproxy.exe --asgardeo
+   
+   # Start in stdio mode
+   openmcpauthproxy.exe --demo --stdio
+   
+   # Enable debug logging
+   openmcpauthproxy.exe --demo --debug
+   
+   # See all available options
+   openmcpauthproxy.exe --help
+   ```
+
+4. The proxy will start and display messages indicating it's running
+5. To stop the proxy, press `Ctrl+C` in the command window

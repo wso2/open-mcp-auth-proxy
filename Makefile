@@ -21,7 +21,7 @@ BUILD_OPTS := -v
 # Set test options
 TEST_OPTS := -v -race
 
-.PHONY: all clean test fmt lint vet coverage help build-windows
+.PHONY: all clean test fmt lint vet coverage help
 
 # Default target
 all: lint test build-linux build-linux-arm build-darwin build-windows
