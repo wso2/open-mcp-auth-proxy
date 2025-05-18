@@ -12,7 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 type TokenClaims struct {
@@ -52,9 +52,9 @@ func FetchJWKS(jwksURL string) error {
 		if parsed.Kty != "RSA" {
 			continue
 		}
-		pk, err := parseRSAPublicKey(parsed.N, parsed.E)
+		pubKey, err := parseRSAPublicKey(parsed.N, parsed.E)
 		if err == nil {
-			publicKeys[parsed.Kid] = pk
+			publicKeys[parsed.Kid] = pubKey
 		}
 	}
 	logger.Info("Loaded %d public keys.", len(publicKeys))
@@ -81,10 +81,6 @@ func parseRSAPublicKey(nStr, eStr string) (*rsa.PublicKey, error) {
 }
 
 // ValidateJWT checks the Bearer token according to the Mcp-Protocol-Version.
-//   - isLatestSpec: whether to use the latest spec validation
-//   - authHeader:    the full "Authorization" header
-//   - audience:      the resource identifier to check "aud" against
-//   - requiredScopes: the scopes required (empty ⇒ skip scope check)
 func ValidateJWT(
 	isLatestSpec bool,
 	authHeader, audience string,
@@ -94,7 +90,7 @@ func ValidateJWT(
 		return nil, errors.New("empty bearer token")
 	}
 
-	// --- parse & verify signature ---
+	// Parse & verify the signature
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -116,19 +112,15 @@ func ValidateJWT(
 		return nil, errors.New("token not valid")
 	}
 
-	// --- extract raw claims ---
 	claimsMap, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return nil, errors.New("unexpected claim type")
 	}
 
-	// --- v1: skip audience check entirely ---
 	if !isLatestSpec {
-		// we still want to return an empty set of scopes for policy to see
 		return &authz.TokenClaims{Scopes: nil}, nil
 	}
 
-	// --- v2: enforce audience ---
 	audRaw, exists := claimsMap["aud"]
 	if !exists {
 		return nil, errors.New("aud claim missing")
@@ -153,7 +145,6 @@ func ValidateJWT(
 		return nil, errors.New("aud claim has unexpected type")
 	}
 
-	// --- collect all scopes from the token, if any ---
 	rawScope := claimsMap["scope"]
 	scopeList := []string{}
 	if s, ok := rawScope.(string); ok {
