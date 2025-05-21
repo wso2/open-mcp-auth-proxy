@@ -106,13 +106,13 @@ base_url: "http://localhost:8000"                              # URL of your MCP
 listen_port: 8080                                              # Address where the proxy will listen
 
 resource_identifier: "http://localhost:8080"                 # Proxy server URL
-scopes_supported:                                            # Scopes required to access the MCP server
+scopes_supported:                                            # Scopes required to defined for the MCP server
 - "read:tools"
 - "read:resources"
 audience: "<audience_value>"                                 # Access token audience
-authorization_servers:                                       # Authorization server URL
+authorization_servers:                                       # Authorization server issuer identifier(s)
 - "https://api.asgardeo.io/t/acme"
-jwks_uri: "https://api.asgardeo.io/t/acme/oauth2/jwks"       # JWKS URL of the Authorization server
+jwks_uri: "https://api.asgardeo.io/t/acme/oauth2/jwks"       # JWKS URL
 ```
 
 4. Start the proxy with Asgardeo integration:
