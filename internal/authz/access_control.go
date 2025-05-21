@@ -1,6 +1,11 @@
 package authz
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/wso2/open-mcp-auth-proxy/internal/config"
+)
 
 type Decision int
 
@@ -15,5 +20,5 @@ type AccessControlResult struct {
 }
 
 type AccessControl interface {
-	ValidateAccess(r *http.Request, claims *TokenClaims, requiredScopes any) AccessControlResult
+	ValidateAccess(r *http.Request, claims *jwt.MapClaims, config *config.Config) AccessControlResult
 }

@@ -11,7 +11,6 @@ import (
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	"github.com/wso2/open-mcp-auth-proxy/internal/constants"
 	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 	"github.com/wso2/open-mcp-auth-proxy/internal/proxy"
 	"github.com/wso2/open-mcp-auth-proxy/internal/subprocess"
@@ -68,23 +67,7 @@ func main() {
 	}
 
 	// 3. Create the chosen provider
-	var provider authz.Provider
-	if *demoMode {
-		cfg.Mode = "demo"
-		cfg.AuthServerBaseURL = constants.ASGARDEO_BASE_URL + cfg.Demo.OrgName + "/oauth2"
-		cfg.JWKSURL = constants.ASGARDEO_BASE_URL + cfg.Demo.OrgName + "/oauth2/jwks"
-		provider = authz.NewAsgardeoProvider(cfg)
-	} else if *asgardeoMode {
-		cfg.Mode = "asgardeo"
-		cfg.AuthServerBaseURL = constants.ASGARDEO_BASE_URL + cfg.Asgardeo.OrgName + "/oauth2"
-		cfg.JWKSURL = constants.ASGARDEO_BASE_URL + cfg.Asgardeo.OrgName + "/oauth2/jwks"
-		provider = authz.NewAsgardeoProvider(cfg)
-	} else {
-		cfg.Mode = "default"
-		cfg.JWKSURL = cfg.Default.JWKSURL
-		cfg.AuthServerBaseURL = cfg.Default.BaseURL
-		provider = authz.NewDefaultProvider(cfg)
-	}
+	var provider authz.Provider = MakeProvider(cfg, *demoMode, *asgardeoMode)
 
 	// 4. (Optional) Fetch JWKS if you want local JWT validation
 	if err := util.FetchJWKS(cfg.JWKSURL); err != nil {
