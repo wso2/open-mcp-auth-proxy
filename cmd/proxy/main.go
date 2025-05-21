@@ -11,7 +11,6 @@ import (
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	"github.com/wso2/open-mcp-auth-proxy/internal/constants"
 	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 	"github.com/wso2/open-mcp-auth-proxy/internal/proxy"
 	"github.com/wso2/open-mcp-auth-proxy/internal/subprocess"
@@ -68,23 +67,7 @@ func main() {
 	}
 
 	// 3. Create the chosen provider
-	var provider authz.Provider
-	if *demoMode {
-		cfg.Mode = "demo"
-		cfg.AuthServerBaseURL = constants.ASGARDEO_BASE_URL + cfg.Demo.OrgName + "/oauth2"
-		cfg.JWKSURL = constants.ASGARDEO_BASE_URL + cfg.Demo.OrgName + "/oauth2/jwks"
-		provider = authz.NewAsgardeoProvider(cfg)
-	} else if *asgardeoMode {
-		cfg.Mode = "asgardeo"
-		cfg.AuthServerBaseURL = constants.ASGARDEO_BASE_URL + cfg.Asgardeo.OrgName + "/oauth2"
-		cfg.JWKSURL = constants.ASGARDEO_BASE_URL + cfg.Asgardeo.OrgName + "/oauth2/jwks"
-		provider = authz.NewAsgardeoProvider(cfg)
-	} else {
-		cfg.Mode = "default"
-		cfg.JWKSURL = cfg.Default.JWKSURL
-		cfg.AuthServerBaseURL = cfg.Default.BaseURL
-		provider = authz.NewDefaultProvider(cfg)
-	}
+	var provider authz.Provider = MakeProvider(cfg, *demoMode, *asgardeoMode)
 
 	// 4. (Optional) Fetch JWKS if you want local JWT validation
 	if err := util.FetchJWKS(cfg.JWKSURL); err != nil {
@@ -92,12 +75,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 5. Build the main router
-	mux := proxy.NewRouter(cfg, provider)
+	// 5. (Optional) Build the access controler
+	accessController := &authz.ScopeValidator{}
+
+	// 6. Build the main router
+	mux := proxy.NewRouter(cfg, provider, accessController)
 
 	listen_address := fmt.Sprintf(":%d", cfg.ListenPort)
 
-	// 6. Start the server
+	// 7. Start the server
 	srv := &http.Server{
 		Addr:    listen_address,
 		Handler: mux,
@@ -111,18 +97,18 @@ func main() {
 		}
 	}()
 
-	// 7. Wait for shutdown signal
+	// 8. Wait for shutdown signal
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop
 	logger.Info("Shutting down...")
 
-	// 8. First terminate subprocess if running
+	// 9. First terminate subprocess if running
 	if procManager != nil && procManager.IsRunning() {
 		procManager.Shutdown()
 	}
 
-	// 9. Then shutdown the server
+	// 10. Then shutdown the server
 	logger.Info("Shutting down HTTP server...")
 	shutdownCtx, cancel := proxy.NewShutdownContext(5 * time.Second)
 	defer cancel()
