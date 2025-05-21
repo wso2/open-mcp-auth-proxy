@@ -32,9 +32,7 @@ A lightweight authorization proxy for Model Context Protocol (MCP) servers that 
 | Version                  | Behavior                                                                                                                                                                                                                                                                                                                                                                                   |
 | :-------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2025-03-26   | Only signature check of Bearer JWT on both `/sse` and `/message`<br> No scope or audience enforcement                                                                                                                                                                                                                                                                                   |
-| Latest(draft) | Read `MCP-Protocol-Version` from client header<br> SSE handshake returns `WWW-Authenticate: Bearer resource_metadata="…"`<br> `/message` enforces:<br>   1. `aud` claim == `ResourceIdentifier`<br>   2. `scope` claim contains per-path `requiredScope`<br>   3. PolicyEngine decision<br> Rich `WWW-Authenticate` on 401s<br> Serves `/​.well-known/oauth-protected-resource` JSON |
-
-> ⚠️ **Note:** MCP v2 support is available **only in SSE mode**. The stdio mode supports only v1.
+| Latest(draft) | Read `MCP-Protocol-Version` from client header<br> SSE handshake returns `WWW-Authenticate: Bearer resource_metadata="…"`<br> `/message` enforces:<br>`aud` claim == `ResourceIdentifier`<br>`scope` claim contains `requiredScope`<br>Scope based access control<br>Rich `WWW-Authenticate` on 401s<br>Serves `/​.well-known/oauth-protected-resource` JSON |
 
 ## 🛠️ Quick Start
 
@@ -104,26 +102,17 @@ To enable authorization through your Asgardeo organization:
 3. Update `config.yaml` with the following parameters.
 
 ```yaml
-base_url: "http://localhost:8000"  # URL of your MCP server  
-listen_port: 8080                             # Address where the proxy will listen
+base_url: "http://localhost:8000"                              # URL of your MCP server  
+listen_port: 8080                                              # Address where the proxy will listen
 
-asgardeo:                                     
-  org_name: "<org_name>"                      # Your Asgardeo org name
-  client_id: "<client_id>"                    # Client ID of the M2M app
-  client_secret: "<client_secret>"            # Client secret of the M2M app
-
-  resource_identifier: "http://localhost:8080"
-  scopes_supported:
-    - "read:tools"
-    - "read:resources"
-  audience: "<audience_value>"
-  authorization_servers:
-    - "https://api.asgardeo.io/t/acme"
-  jwks_uri: "https://api.asgardeo.io/t/acme/oauth2/jwks"
-  bearer_methods_supported:
-    - header
-    - body
-    - query
+resource_identifier: "http://localhost:8080"                 # Proxy server URL
+scopes_supported:                                            # Scopes required to access the MCP server
+- "read:tools"
+- "read:resources"
+audience: "<audience_value>"                                 # Access token audience
+authorization_servers:                                       # Authorization server URL
+- "https://api.asgardeo.io/t/acme"
+jwks_uri: "https://api.asgardeo.io/t/acme/oauth2/jwks"       # JWKS URL of the Authorization server
 ```
 
 4. Start the proxy with Asgardeo integration:
@@ -246,22 +235,14 @@ demo:
   client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"  
 
 # Asgardeo configuration (used with --asgardeo flag)
-asgardeo:
-  org_name: "<org_name>"
-  client_id: "<client_id>"
-  client_secret: "<client_secret>"
-  resource_identifier: "http://localhost:8080"
-  scopes_supported:
-    - "read:tools"
-    - "read:resources"
-  audience: "<audience_value>"
-  authorization_servers:
-    - "https://api.asgardeo.io/t/acme"
-  jwks_uri: "https://api.asgardeo.io/t/acme/oauth2/jwks"
-  bearer_methods_supported:
-    - header
-    - body
-    - query
+resource_identifier: "http://localhost:8080"                 
+scopes_supported:                                 
+- "read:tools"
+- "read:resources"
+audience: "<audience_value>"
+authorization_servers:
+- "https://api.asgardeo.io/t/acme"
+jwks_uri: "https://api.asgardeo.io/t/acme/oauth2/jwks"   
 ```
 ## Build from Source
 

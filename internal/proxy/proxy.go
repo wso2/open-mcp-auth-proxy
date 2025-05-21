@@ -302,6 +302,7 @@ func authorizeSSE(w http.ResponseWriter, r *http.Request, isLatestSpec bool, res
 // Handles both v1 (just signature) and v2 (aud + scope) flows
 func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg *config.Config, accessController authz.AccessControl) error {
 	authzHeader := r.Header.Get("Authorization")
+	accessToken, _ := util.ExtractAccessToken(authzHeader)
 	if !strings.HasPrefix(authzHeader, "Bearer ") {
 		if isLatestSpec {
 			realm := cfg.ResourceIdentifier + "/.well-known/oauth-protected-resource"
@@ -314,7 +315,7 @@ func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg
 		return fmt.Errorf("missing or invalid Authorization header")
 	}
 
-	claims, err := util.ValidateJWT(isLatestSpec, authzHeader, cfg.Audience)
+	err := util.ValidateJWT(isLatestSpec, accessToken, cfg.Audience)
 	if err != nil {
 		if isLatestSpec {
 			realm := cfg.ResourceIdentifier + "/.well-known/oauth-protected-resource"
@@ -331,16 +332,19 @@ func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg
 	}
 
 	if isLatestSpec {
-		env, err := util.ParseRPCRequest(r)
+		_, err := util.ParseRPCRequest(r)
 		if err != nil {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			return err
 		}
-		requiredScopes := util.GetRequiredScopes(cfg, env.Method)
-		if len(requiredScopes) == 0 {
-			return nil
+
+		claimsMap, err := util.ParseJWT(accessToken)
+		if err != nil {
+			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+			return fmt.Errorf("invalid token claims")
 		}
-		pr := accessController.ValidateAccess(r, claims, requiredScopes)
+		
+		pr := accessController.ValidateAccess(r, &claimsMap, cfg)
 		if pr.Decision == authz.DecisionDeny {
 			http.Error(w, "Forbidden: "+pr.Message, http.StatusForbidden)
 			return fmt.Errorf("forbidden — %s", pr.Message)
