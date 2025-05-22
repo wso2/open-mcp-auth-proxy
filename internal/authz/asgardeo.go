@@ -13,14 +13,14 @@ import (
 	"time"
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 type asgardeoProvider struct {
 	cfg *config.Config
 }
 
-// NewAsgardeoProvider initializes a Provider for Asgardeo (demo mode).
+// NewAsgardeoProvider initializes a Provider for Asgardeo.
 func NewAsgardeoProvider(cfg *config.Config) Provider {
 	return &asgardeoProvider{cfg: cfg}
 }
@@ -159,13 +159,19 @@ type RegisterResponse struct {
 }
 
 func (p *asgardeoProvider) createAsgardeoApplication(regReq RegisterRequest) error {
+
+	orgName := p.cfg.Demo.OrgName
+	if p.cfg.Mode == "asgardeo" {
+		orgName = p.cfg.Asgardeo.OrgName
+	}
+
 	body := buildAsgardeoPayload(regReq)
 	reqBytes, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal Asgardeo request: %w", err)
 	}
 
-	asgardeoAppURL := "https://api.asgardeo.io/t/" + p.cfg.Demo.OrgName + "/api/server/v1/applications"
+	asgardeoAppURL := "https://api.asgardeo.io/t/" + orgName + "/api/server/v1/applications"
 	req, err := http.NewRequest("POST", asgardeoAppURL, bytes.NewBuffer(reqBytes))
 	if err != nil {
 		return fmt.Errorf("failed to create Asgardeo API request: %w", err)
@@ -195,6 +201,14 @@ func (p *asgardeoProvider) createAsgardeoApplication(regReq RegisterRequest) err
 }
 
 func (p *asgardeoProvider) getAsgardeoAdminToken() (string, error) {
+
+	clientId := p.cfg.Demo.ClientID
+	clientSecret := p.cfg.Demo.ClientSecret
+	if p.cfg.Mode == "asgardeo" {
+		clientId = p.cfg.Asgardeo.ClientID
+		clientSecret = p.cfg.Asgardeo.ClientSecret
+	}
+
 	tokenURL := p.cfg.AuthServerBaseURL + "/token"
 
 	formData := "grant_type=client_credentials&scope=internal_application_mgt_create internal_application_mgt_delete " +
@@ -207,10 +221,10 @@ func (p *asgardeoProvider) getAsgardeoAdminToken() (string, error) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Sensitive data - should not be logged at INFO level
-	auth := p.cfg.Demo.ClientID + ":" + p.cfg.Demo.ClientSecret
+	auth := clientId + ":" + clientSecret
 	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
-	
-	logger.Debug("Requesting admin token for Asgardeo with client ID: %s", p.cfg.Demo.ClientID)
+
+	logger.Debug("Requesting admin token for Asgardeo with client ID: %s", clientId)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
