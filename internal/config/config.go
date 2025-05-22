@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"runtime"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -145,7 +147,16 @@ func (c *Config) BuildExecCommand() string {
 		return ""
 	}
 
-	// Construct the full command
+
+	if runtime.GOOS == "windows" {
+		// For Windows, we need to properly escape the inner command
+		escapedCommand := strings.ReplaceAll(c.Stdio.UserCommand, `"`, `\"`)
+		return fmt.Sprintf(
+			`npx -y supergateway --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
+			escapedCommand, c.Port, c.BaseURL, c.Paths.SSE, c.Paths.Messages,
+		)
+	}
+
 	return fmt.Sprintf(
 		`npx -y supergateway --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
 		c.Stdio.UserCommand, c.Port, c.BaseURL, c.Paths.SSE, c.Paths.Messages,
