@@ -51,8 +51,14 @@ Open MCP Auth Proxy sits between MCP clients and your MCP server to:
 
 2. Start the proxy in demo mode (uses pre-configured authentication with Asgardeo sandbox):
 
+#### Linux/macOS:
 ```bash
 ./openmcpauthproxy --demo
+```
+
+#### Windows:
+```powershell
+.\openmcpauthproxy.exe --demo
 ```
 
 > The repository comes with a default `config.yaml` file that contains the basic configuration:
