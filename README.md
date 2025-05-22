@@ -223,102 +223,100 @@ asgardeo:
 ```
 ## Build from Source
 
-### Prerequisites for Building
+### Prerequisites
 
 * Go 1.20 or higher
 * Git
-* Make (for Linux/macOS builds)
+* Make (optional, for simplified builds)
 
-### Building on Linux/macOS
+### Clone and Build
 
-1. Clone the repository:
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/wso2/open-mcp-auth-proxy
    cd open-mcp-auth-proxy
    ```
 
-2. Install dependencies:
+2. **Install dependencies:**
    ```bash
    go get -v -t -d ./...
    ```
 
-3. Build for your platform:
+3. **Build the application:**
+
+   **Option A: Using Make**
    ```bash
    # Build for all platforms
    make all
    
-   # Or build for a specific platform
-   make build-linux   # For Linux
-   make build-darwin  # For macOS
-   make build-linux-arm # For ARM-based Linux
-   make build-windows # For Windows
+   # Or build for specific platforms
+   make build-linux      # For Linux (x86_64)
+   make build-linux-arm  # For ARM-based Linux
+   make build-darwin     # For macOS
+   make build-windows    # For Windows
    ```
 
-4. Find your build in the `build` directory:
+   **Option B: Manual build (works on all platforms)**
    ```bash
-   # For Linux
-   ./build/linux/openmcpauthproxy --demo
+   # Build for your current platform
+   go build -o openmcpauthproxy ./cmd/proxy
    
-   # For macOS
-   ./build/darwin/openmcpauthproxy --demo
+   # Cross-compile for other platforms
+   GOOS=linux GOARCH=amd64 go build -o openmcpauthproxy-linux ./cmd/proxy
+   GOOS=windows GOARCH=amd64 go build -o openmcpauthproxy.exe ./cmd/proxy
+   GOOS=darwin GOARCH=amd64 go build -o openmcpauthproxy-macos ./cmd/proxy
    ```
 
-### Building on Windows
+### Run the Built Application
 
-1. Clone the repository:
-   ```powershell
-   git clone https://github.com/wso2/open-mcp-auth-proxy
-   cd open-mcp-auth-proxy
-   ```
+After building, you'll find the executables in the `build` directory (when using Make) or in your project root (when building manually).
 
-2. Install dependencies:
-   ```powershell
-   go get -v -t -d ./...
-   ```
+**Linux/macOS:**
+```bash
+# If built with Make
+./build/linux/openmcpauthproxy --demo
 
-3. Option 1: Build using Make if you have it installed:
-   ```powershell
-   make build-windows
-   ```
+# If built manually
+./openmcpauthproxy --demo
+```
 
-   Option 2: Build manually without Make:
-   ```powershell
-   mkdir -p build\windows
-   go build -o build\windows\openmcpauthproxy.exe .\cmd\proxy
-   copy config.yaml build\windows\
-   ```
+**Windows:**
+```powershell
+# If built with Make
+.\build\windows\openmcpauthproxy.exe --demo
 
-4. Run the built application:
-   ```powershell
-   cd build\windows
-   .\openmcpauthproxy.exe --demo
-   ```
+# If built manually
+.\openmcpauthproxy.exe --demo
+```
 
-### Starting the Proxy on Windows
+### Available Command Line Options
 
-1. Open Command Prompt or PowerShell
-2. Navigate to the build directory:
-   ```powershell
-   cd build\windows
-   ```
+```bash
+# Start in demo mode (using Asgardeo sandbox)
+./openmcpauthproxy --demo
 
-3. Run the executable with your desired options:
-   ```powershell
-   # Start in demo mode (using Asgardeo sandbox)
-   openmcpauthproxy.exe --demo
-   
-   # Start with Asgardeo integration
-   openmcpauthproxy.exe --asgardeo
-   
-   # Start in stdio mode
-   openmcpauthproxy.exe --demo --stdio
-   
-   # Enable debug logging
-   openmcpauthproxy.exe --demo --debug
-   
-   # See all available options
-   openmcpauthproxy.exe --help
-   ```
+# Start with your own Asgardeo organization
+./openmcpauthproxy --asgardeo
 
-4. The proxy will start and display messages indicating it's running
-5. To stop the proxy, press `Ctrl+C` in the command window
+# Use stdio transport mode instead of SSE
+./openmcpauthproxy --demo --stdio
+
+# Enable debug logging
+./openmcpauthproxy --demo --debug
+
+# Show all available options
+./openmcpauthproxy --help
+```
+
+### Additional Make Targets
+
+If you're using Make, these additional targets are available:
+
+```bash
+make test       # Run tests
+make coverage   # Run tests with coverage report
+make fmt        # Format code with gofmt
+make vet        # Run go vet
+make clean      # Clean build artifacts
+make help       # Show all available targets
+```
