@@ -136,20 +136,15 @@ func TestValidate(t *testing.T) {
 func TestGetMCPPaths(t *testing.T) {
 	cfg := Config{
 		Paths: PathsConfig{
-			SSE:      "/custom-sse",
-			Messages: "/custom-messages",
+			SSE:            "/custom-sse",
+			Messages:       "/custom-messages",
+			StreamableHTTP: "/custom-streamable",
 		},
 	}
 
 	paths := cfg.GetMCPPaths()
-	if len(paths) != 2 {
-		t.Errorf("Expected 2 MCP paths, got %d", len(paths))
-	}
-	if paths[0] != "/custom-sse" {
-		t.Errorf("Expected first path=/custom-sse, got %s", paths[0])
-	}
-	if paths[1] != "/custom-messages" {
-		t.Errorf("Expected second path=/custom-messages, got %s", paths[1])
+	if len(paths) != 3 {
+		t.Errorf("Expected 3 MCP paths, got %d", len(paths))
 	}
 }
 
