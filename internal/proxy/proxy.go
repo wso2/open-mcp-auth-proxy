@@ -10,7 +10,7 @@ import (
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
 
@@ -106,7 +106,7 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 		logger.Error("Invalid auth server URL: %v", err)
 		panic(err) // Fatal error that prevents startup
 	}
-	
+
 	mcpBase, err := url.Parse(cfg.BaseURL)
 	if err != nil {
 		logger.Error("Invalid MCP server URL: %v", err)
@@ -191,13 +191,13 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 				req.Host = targetURL.Host
 
 				cleanHeaders := http.Header{}
-				
+
 				// Set proper origin header to match the target
 				if isSSE {
 					// For SSE, ensure origin matches the target
 					req.Header.Set("Origin", targetURL.Scheme+"://"+targetURL.Host)
 				}
-				
+
 				for k, v := range r.Header {
 					// Skip hop-by-hop headers
 					if skipHeader(k) {
@@ -231,12 +231,12 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 				proxyHost:  r.Host,
 				targetHost: targetURL.Host,
 			}
-			
+
 			// Set SSE-specific headers
 			w.Header().Set("X-Accel-Buffering", "no")
 			w.Header().Set("Cache-Control", "no-cache")
 			w.Header().Set("Connection", "keep-alive")
-			
+
 			// Keep SSE connections open
 			HandleSSE(w, r, rp)
 		} else {

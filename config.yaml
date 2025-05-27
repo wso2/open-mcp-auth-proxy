@@ -2,14 +2,15 @@
 
 # Common configuration for all transport modes
 listen_port: 8080
-base_url: "http://localhost:8000" # Base URL for the MCP server
-port: 8000 # Port for the MCP server
+base_url: "http://localhost:3001" # Base URL for the MCP server
+port: 3001 # Port for the MCP server
 timeout_seconds: 10
 
 # Path configuration
 paths:
   sse: "/sse" # SSE endpoint path
   messages: "/messages/" # Messages endpoint path
+  streamable_http: "/mcp" # MCP endpoint path
 
 # Transport mode configuration
 transport_mode: "sse" # Options: "sse" or "stdio"
@@ -28,7 +29,7 @@ path_mapping:
 # CORS configuration
 cors:
   allowed_origins:
-    - "http://localhost:5173"
+    - "http://127.0.0.1:6274"
   allowed_methods:
     - "GET"
     - "POST"
