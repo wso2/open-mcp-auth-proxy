@@ -113,6 +113,7 @@ func (p *asgardeoProvider) RegisterHandler() http.HandlerFunc {
 
 		if err := p.createAsgardeoApplication(regReq); err != nil {
 			logger.Warn("Asgardeo application creation failed: %v", err)
+			http.Error(w, "Failed to create application in Asgardeo", http.StatusInternalServerError)
 			// Optionally http.Error(...) if you want to fail
 			// or continue to return partial data.
 		}
@@ -269,6 +270,18 @@ func buildAsgardeoPayload(regReq RegisterRequest) map[string]interface{} {
 	}
 	appName += "-" + randomString(5)
 
+	// Build redirect URIs regex from list of redirect URIs : regexp=(https://app.example.com/callback1|https://app.example.com/callback2)
+	redirectURI := "regexp=(" + strings.Join(regReq.RedirectURIs, "|") + ")"
+	redirectURIs := []string{redirectURI}
+
+	// Filter unsupported grant types
+	var grantTypes []string
+	for _, gt := range regReq.GrantTypes {
+		if gt == "authorization_code" || gt == "refresh_token" {
+			grantTypes = append(grantTypes, gt)
+		}
+	}
+
 	return map[string]interface{}{
 		"name":       appName,
 		"templateId": "custom-application-oidc",
@@ -276,10 +289,10 @@ func buildAsgardeoPayload(regReq RegisterRequest) map[string]interface{} {
 			"oidc": map[string]interface{}{
 				"clientId":       regReq.ClientID,
 				"clientSecret":   regReq.ClientSecret,
-				"grantTypes":     regReq.GrantTypes,
-				"callbackURLs":   regReq.RedirectURIs,
+				"grantTypes":     grantTypes,
+				"callbackURLs":   redirectURIs,
 				"allowedOrigins": []string{},
-				"publicClient":   false,
+				"publicClient":   true,
 				"pkce": map[string]bool{
 					"mandatory":                      true,
 					"supportPlainTransformAlgorithm": true,
