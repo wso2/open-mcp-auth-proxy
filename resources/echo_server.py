@@ -2,7 +2,6 @@ from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("Echo")
 
-
 @mcp.resource("echo://{message}")
 def echo_resource(message: str) -> str:
     """Echo a message as a resource"""
