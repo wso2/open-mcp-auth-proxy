@@ -18,36 +18,37 @@ func (d *ScopeValidator) ValidateAccess(
 	claims *jwt.MapClaims,
 	config *config.Config,
 ) AccessControlResult {
-    env, err := util.ParseRPCRequest(r)
-    if err != nil {
-        return AccessControlResult{DecisionDeny, "bad JSON-RPC request"}
-    }
-    requiredScopes := util.GetRequiredScopes(config, env.Method)
-    if len(requiredScopes) == 0 {
-        return AccessControlResult{DecisionAllow, ""}
-    }
+	env, err := util.ParseRPCRequest(r)
+	if err != nil {
+		return AccessControlResult{DecisionDeny, "bad JSON-RPC request"}
+	}
+	requiredScopes := util.GetRequiredScopes(config, env)
 
-    required := make(map[string]struct{}, len(requiredScopes))
-    for _, s := range requiredScopes {
-        s = strings.TrimSpace(s)
-        if s != "" {
-            required[s] = struct{}{}
-        }
-    }
+	if len(requiredScopes) == 0 {
+		return AccessControlResult{DecisionAllow, ""}
+	}
 
-    var tokenScopes []string
-    if claims, ok := (*claims)["scope"]; ok {
-        switch v := claims.(type) {
-        case string:
-            tokenScopes = strings.Fields(v)
-        case []interface{}:
-            for _, x := range v {
-                if s, ok := x.(string); ok && s != "" {
-                    tokenScopes = append(tokenScopes, s)
-                }
-            }
-        }
-    }
+	required := make(map[string]struct{}, len(requiredScopes))
+	for _, s := range requiredScopes {
+		s = strings.TrimSpace(s)
+		if s != "" {
+			required[s] = struct{}{}
+		}
+	}
+
+	var tokenScopes []string
+	if claims, ok := (*claims)["scope"]; ok {
+		switch v := claims.(type) {
+		case string:
+			tokenScopes = strings.Fields(v)
+		case []interface{}:
+			for _, x := range v {
+				if s, ok := x.(string); ok && s != "" {
+					tokenScopes = append(tokenScopes, s)
+				}
+			}
+		}
+	}
 
 	tokenScopeSet := make(map[string]struct{}, len(tokenScopes))
 	for _, s := range tokenScopes {

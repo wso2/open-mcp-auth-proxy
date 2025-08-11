@@ -194,7 +194,7 @@ func (p *asgardeoProvider) createAsgardeoApplication(regReq RegisterRequest) err
 
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("Asgardeo creation error (%d): %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("asgardeo creation error (%d): %s", resp.StatusCode, string(respBody))
 	}
 
 	logger.Info("Created Asgardeo application for clientID=%s", regReq.ClientID)
@@ -367,16 +367,41 @@ func randomString(n int) string {
 func (p *asgardeoProvider) ProtectedResourceMetadataHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+
+		// Extract only the values into a []string
+		var supportedScopes []string
+		var extractStrings func(interface{})
+		extractStrings = func(val interface{}) {
+			switch v := val.(type) {
+			case string:
+				supportedScopes = append(supportedScopes, v)
+			case []any:
+				for _, item := range v {
+					extractStrings(item)
+				}
+			case map[string]any:
+				for _, item := range v {
+					extractStrings(item)
+				}
+			}
+		}
+		for _, m := range p.cfg.ProtectedResourceMetadata.ScopesSupported {
+			for _, v := range m {
+				extractStrings(v)
+			}
+		}
+
 		meta := map[string]interface{}{
-			"resource":              p.cfg.ResourceIdentifier,
-			"scopes_supported":      p.cfg.ScopesSupported,
-			"authorization_servers": p.cfg.AuthorizationServers,
+			"resource":              p.cfg.ProtectedResourceMetadata.ResourceIdentifier,
+			"scopes_supported":      supportedScopes,
+			"authorization_servers": p.cfg.ProtectedResourceMetadata.AuthorizationServers,
 		}
-		if p.cfg.JwksURI != "" {
-			meta["jwks_uri"] = p.cfg.JwksURI
+
+		if p.cfg.ProtectedResourceMetadata.JwksURI != "" {
+			meta["jwks_uri"] = p.cfg.ProtectedResourceMetadata.JwksURI
 		}
-		if len(p.cfg.BearerMethodsSupported) > 0 {
-			meta["bearer_methods_supported"] = p.cfg.BearerMethodsSupported
+		if len(p.cfg.ProtectedResourceMetadata.BearerMethodsSupported) > 0 {
+			meta["bearer_methods_supported"] = p.cfg.ProtectedResourceMetadata.BearerMethodsSupported
 		}
 		if err := json.NewEncoder(w).Encode(meta); err != nil {
 			http.Error(w, "failed to encode metadata", http.StatusInternalServerError)

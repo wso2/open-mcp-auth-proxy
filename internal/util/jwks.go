@@ -11,7 +11,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 type TokenClaims struct {
@@ -82,7 +82,7 @@ func parseRSAPublicKey(nStr, eStr string) (*rsa.PublicKey, error) {
 // ValidateJWT checks the Bearer token according to the Mcp-Protocol-Version.
 func ValidateJWT(
 	isLatestSpec bool,
-	accessToken string, 
+	accessToken string,
 	audience string,
 ) error {
 	logger.Warn("isLatestSpec: %s", isLatestSpec)
@@ -148,46 +148,66 @@ func ValidateJWT(
 
 // Parses the JWT token and returns the claims
 func ParseJWT(tokenStr string) (jwt.MapClaims, error) {
-    if tokenStr == "" {
-        return nil, fmt.Errorf("empty JWT")
-    }
+	if tokenStr == "" {
+		return nil, fmt.Errorf("empty JWT")
+	}
 
-    var claims jwt.MapClaims
-    _, _, err := jwt.NewParser().ParseUnverified(tokenStr, &claims)
-    if err != nil {
-        return nil, fmt.Errorf("failed to parse JWT: %w", err)
-    }
-    return claims, nil
+	var claims jwt.MapClaims
+	_, _, err := jwt.NewParser().ParseUnverified(tokenStr, &claims)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JWT: %w", err)
+	}
+	return claims, nil
 }
 
 // Process the required scopes
-func GetRequiredScopes(cfg *config.Config, method string) []string {
-    switch raw := cfg.ScopesSupported.(type) {
-    case map[string]string:
-        if scope, ok := raw[method]; ok {
-            return []string{scope}
-        }
-        parts := strings.SplitN(method, "/", 2)
-        if len(parts) > 0 {
-            if scope, ok := raw[parts[0]]; ok {
-                return []string{scope}
-            }
-        }
-        return nil
-    case []interface{}:
-        out := make([]string, 0, len(raw))
-        for _, v := range raw {
-            if s, ok := v.(string); ok && s != "" {
-                out = append(out, s)
-            }
-        }
-        return out
+func GetRequiredScopes(cfg *config.Config, requestBody *RPCEnvelope) []string {
 
-    case []string:
-        return raw
-    }
+	var scopeObj interface{}
+	found := false
+	for _, m := range cfg.ProtectedResourceMetadata.ScopesSupported {
+		if val, ok := m[requestBody.Method]; ok {
+			scopeObj = val
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil
+	}
 
-    return nil
+	switch v := scopeObj.(type) {
+	case string:
+		return []string{v}
+	case []any:
+		if requestBody.Params != nil {
+			if paramsMap, ok := requestBody.Params.(map[string]any); ok {
+				name, ok := paramsMap["name"].(string)
+				if ok {
+					for _, item := range v {
+						if scopeMap, ok := item.(map[interface{}]interface{}); ok {
+							if scopeVal, exists := scopeMap[name]; exists {
+								if scopeStr, ok := scopeVal.(string); ok {
+									return []string{scopeStr}
+								}
+								if scopeArr, ok := scopeVal.([]any); ok {
+									var scopes []string
+									for _, s := range scopeArr {
+										if str, ok := s.(string); ok {
+											scopes = append(scopes, str)
+										}
+									}
+									return scopes
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // Extracts the Bearer token from the Authorization header

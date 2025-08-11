@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
 )
 
 type defaultProvider struct {
@@ -99,18 +99,17 @@ func (p *defaultProvider) ProtectedResourceMetadataHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		meta := map[string]interface{}{
-			"audience": p.cfg.Audience,
-			"resource": p.cfg.ResourceIdentifier,
-			"scopes_supported": p.cfg.ScopesSupported,
-			"authorization_servers": p.cfg.AuthorizationServers,
+			"audience":              p.cfg.ProtectedResourceMetadata.Audience,
+			"scopes_supported":      p.cfg.ProtectedResourceMetadata.ScopesSupported,
+			"authorization_servers": p.cfg.ProtectedResourceMetadata.AuthorizationServers,
 		}
 
-		if p.cfg.JwksURI != "" {
-			meta["jwks_uri"] = p.cfg.JwksURI
+		if p.cfg.ProtectedResourceMetadata.JwksURI != "" {
+			meta["jwks_uri"] = p.cfg.ProtectedResourceMetadata.JwksURI
 		}
 
-		if len(p.cfg.BearerMethodsSupported) > 0 {
-			meta["bearer_methods_supported"] = p.cfg.BearerMethodsSupported
+		if len(p.cfg.ProtectedResourceMetadata.BearerMethodsSupported) > 0 {
+			meta["bearer_methods_supported"] = p.cfg.ProtectedResourceMetadata.BearerMethodsSupported
 		}
 
 		if err := json.NewEncoder(w).Encode(meta); err != nil {

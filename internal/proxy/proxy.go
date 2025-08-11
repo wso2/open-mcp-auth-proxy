@@ -11,7 +11,7 @@ import (
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/authz"
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
 
@@ -64,7 +64,7 @@ func NewRouter(cfg *config.Config, provider authz.Provider, accessController aut
 		}
 	}
 
-	mux.HandleFunc("/.well-known/oauth-protected-resource", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(getProtectedResourceMetadataEndpointPath(cfg), func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		allowed := getAllowedOrigin(origin, cfg)
 		if r.Method == http.MethodOptions {
@@ -76,7 +76,7 @@ func NewRouter(cfg *config.Config, provider authz.Provider, accessController aut
 		addCORSHeaders(w, cfg, allowed, "")
 		provider.ProtectedResourceMetadataHandler()(w, r)
 	})
-	registeredPaths["/.well-known/oauth-protected-resource"] = true
+	registeredPaths[getProtectedResourceMetadataEndpointPath(cfg)] = true
 
 	// Remove duplicates from defaultPaths
 	uniquePaths := make(map[string]bool)
@@ -165,11 +165,11 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier,
 		var targetURL *url.URL
 		isSSE := false
 
-		if isAuthPath(r.URL.Path) {
+		if isAuthPath(r.URL.Path, cfg) {
 			targetURL = authBase
 		} else if isMCPPath(r.URL.Path, cfg) {
 			if ssePaths[r.URL.Path] {
-				if err := authorizeSSE(w, r, isLatestSpec, cfg.ResourceIdentifier); err != nil {
+				if err := authorizeSSE(w, r, isLatestSpec, cfg); err != nil {
 					http.Error(w, err.Error(), http.StatusUnauthorized)
 					return
 				}
@@ -245,7 +245,7 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier,
 						"WWW-Authenticate",
 						fmt.Sprintf(
 							`Bearer resource_metadata="%s"`,
-							cfg.ResourceIdentifier+"/.well-known/oauth-protected-resource",
+							cfg.ProxyBaseURL+getProtectedResourceMetadataEndpointPath(cfg),
 						))
 					resp.Header.Set("Access-Control-Expose-Headers", "WWW-Authenticate")
 				}
@@ -285,11 +285,11 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier,
 }
 
 // Check if the request is for SSE handshake and authorize it
-func authorizeSSE(w http.ResponseWriter, r *http.Request, isLatestSpec bool, resourceID string) error {
+func authorizeSSE(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg *config.Config) error {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 		if isLatestSpec {
-			realm := resourceID + "/.well-known/oauth-protected-resource"
+			realm := cfg.BaseURL + getProtectedResourceMetadataEndpointPath(cfg)
 			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata="%s"`, realm))
 			w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate")
 		}
@@ -305,7 +305,7 @@ func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg
 	accessToken, _ := util.ExtractAccessToken(authzHeader)
 	if !strings.HasPrefix(authzHeader, "Bearer ") {
 		if isLatestSpec {
-			realm := cfg.ResourceIdentifier + "/.well-known/oauth-protected-resource"
+			realm := cfg.ProxyBaseURL + getProtectedResourceMetadataEndpointPath(cfg)
 			w.Header().Set("WWW-Authenticate", fmt.Sprintf(
 				`Bearer resource_metadata=%q`, realm,
 			))
@@ -315,10 +315,10 @@ func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg
 		return fmt.Errorf("missing or invalid Authorization header")
 	}
 
-	err := util.ValidateJWT(isLatestSpec, accessToken, cfg.Audience)
+	err := util.ValidateJWT(isLatestSpec, accessToken, cfg.ProtectedResourceMetadata.Audience)
 	if err != nil {
 		if isLatestSpec {
-			realm := cfg.ResourceIdentifier + "/.well-known/oauth-protected-resource"
+			realm := cfg.ProxyBaseURL + getProtectedResourceMetadataEndpointPath(cfg)
 			w.Header().Set("WWW-Authenticate", fmt.Sprintf(err.Error(),
 				`Bearer realm=%q`,
 				realm,
@@ -343,7 +343,7 @@ func authorizeMCP(w http.ResponseWriter, r *http.Request, isLatestSpec bool, cfg
 			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
 			return fmt.Errorf("invalid token claims")
 		}
-		
+
 		pr := accessController.ValidateAccess(r, &claimsMap, cfg)
 		if pr.Decision == authz.DecisionDeny {
 			http.Error(w, "Forbidden: "+pr.Message, http.StatusForbidden)
@@ -385,13 +385,13 @@ func addCORSHeaders(w http.ResponseWriter, cfg *config.Config, allowedOrigin, re
 	w.Header().Set("X-Accel-Buffering", "no")
 }
 
-func isAuthPath(path string) bool {
+func isAuthPath(path string, cfg *config.Config) bool {
 	authPaths := map[string]bool{
 		"/authorize": true,
 		"/token":     true,
 		"/register":  true,
-		"/.well-known/oauth-authorization-server": true,
-		"/.well-known/oauth-protected-resource":   true,
+		"/.well-known/oauth-authorization-server":     true,
+		getProtectedResourceMetadataEndpointPath(cfg): true,
 	}
 	if strings.HasPrefix(path, "/u/") {
 		return true
@@ -416,4 +416,18 @@ func skipHeader(h string) bool {
 		return true
 	}
 	return false
+}
+
+func getProtectedResourceMetadataEndpointPath(cfg *config.Config) string {
+
+	protectedResourceMetadataPath := "/.well-known/oauth-protected-resource"
+
+	switch cfg.TransportMode {
+	case config.SSETransport:
+		protectedResourceMetadataPath += cfg.Paths.SSE
+	case config.StreamableHTTPTransport:
+		protectedResourceMetadataPath += cfg.Paths.StreamableHTTP
+	}
+
+	return protectedResourceMetadataPath
 }

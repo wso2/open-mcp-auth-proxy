@@ -1,9 +1,10 @@
 # config.yaml
 
 # Common configuration for all transport modes
+proxy_base_url: http://localhost:8080
 listen_port: 8080
-base_url: "http://localhost:3001" # Base URL for the MCP server
-port: 3001 # Port for the MCP server
+base_url: "http://localhost:8000" # Base URL for the MCP server
+port: 8000 # Port for the MCP server
 timeout_seconds: 10
 
 # Path configuration
@@ -17,7 +18,7 @@ transport_mode: "sse" # Options: "sse" or "stdio"
 
 # stdio-specific configuration (used only when transport_mode is "stdio")
 stdio:
-  enabled: true
+  enabled: false
   user_command: "npx -y @modelcontextprotocol/server-github"
   work_dir: "" # Working directory (optional)
   # env:                           # Environment variables (optional)
@@ -30,6 +31,7 @@ path_mapping:
 cors:
   allowed_origins:
     - "http://127.0.0.1:6274"
+    - "http://localhost:6274"
   allowed_methods:
     - "GET"
     - "POST"
@@ -47,17 +49,17 @@ demo:
   client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
   client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"
 
-# Protected resource metadata
-resource_identifier: http://localhost:3000
-audience: mcp_proxy
-scopes_supported:
-  - "tools":"read:tools"
-  - "resources":"read:resources"
-  - "prompts":"read:prompts"
-authorization_servers:
-  - https://api.asgardeo.io/t/acme/
-jwks_uri: https://api.asgardeo.io/t/acme/oauth2/jwks
-bearer_methods_supported:
-  - header
-  - body
-  - query
+protected_resource_metadata:
+  resource_identifier: http://localhost:8080/sse
+  audience: 2xGW_poFYoObUE_vUQxvGdPSUPwa
+  scopes_supported:
+    - initialize: "mcp_init"
+    - tools/call:
+      - echo_tool: "mcp_echo_tool"
+  authorization_servers:
+    - https://api.asgardeo.io/t/openmcpauthdemo/oauth2/token
+  jwks_uri: https://api.asgardeo.io/t/openmcpauthdemo/oauth2/jwks
+  bearer_methods_supported:
+    - header
+    - body
+    - query
