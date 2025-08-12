@@ -7,4 +7,5 @@ import "net/http"
 type Provider interface {
 	WellKnownHandler() http.HandlerFunc
 	RegisterHandler() http.HandlerFunc
+	ProtectedResourceMetadataHandler() http.HandlerFunc
 }

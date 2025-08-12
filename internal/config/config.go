@@ -13,8 +13,9 @@ import (
 type TransportMode string
 
 const (
-	SSETransport   TransportMode = "sse"
-	StdioTransport TransportMode = "stdio"
+	SSETransport            TransportMode = "sse"
+	StdioTransport          TransportMode = "stdio"
+	StreamableHTTPTransport TransportMode = "streamable_http"
 )
 
 // Common path configuration for all transport modes
@@ -68,6 +69,15 @@ type ResponseConfig struct {
 	CodeChallengeMethodsSupported []string `yaml:"code_challenge_methods_supported,omitempty"`
 }
 
+type ProtectedResourceMetadata struct {
+	ResourceIdentifier     string                   `yaml:"resource_identifier"`
+	Audience               string                   `yaml:"audience"`
+	ScopesSupported        []map[string]interface{} `yaml:"scopes_supported"`
+	AuthorizationServers   []string                 `yaml:"authorization_servers"`
+	JwksURI                string                   `yaml:"jwks_uri,omitempty"`
+	BearerMethodsSupported []string                 `yaml:"bearer_methods_supported,omitempty"`
+}
+
 type PathConfig struct {
 	// For well-known endpoint
 	Response *ResponseConfig `yaml:"response,omitempty"`
@@ -86,6 +96,7 @@ type DefaultConfig struct {
 }
 
 type Config struct {
+	ProxyBaseURL      string `yaml:"proxy_base_url"`
 	AuthServerBaseURL string
 	ListenPort        int    `yaml:"listen_port"`
 	BaseURL           string `yaml:"base_url"`
@@ -103,6 +114,9 @@ type Config struct {
 	Demo     DemoConfig     `yaml:"demo"`
 	Asgardeo AsgardeoConfig `yaml:"asgardeo"`
 	Default  DefaultConfig  `yaml:"default"`
+
+	// Protected resource metadata
+	ProtectedResourceMetadata ProtectedResourceMetadata `yaml:"protected_resource_metadata"`
 }
 
 // Validate checks if the config is valid based on transport mode
