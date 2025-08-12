@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,7 +48,14 @@ func TestValidateJWT(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateJWT(tc.authHeader)
+			var accessToken string
+			parts := strings.Split(tc.authHeader, "Bearer ")
+			if len(parts) == 2 {
+				accessToken = parts[1]
+			} else {
+				accessToken = ""
+			}
+			err := ValidateJWT(true, accessToken, "test-audience")
 			if tc.expectError && err == nil {
 				t.Errorf("Expected error but got none")
 			}
@@ -128,6 +136,7 @@ func createValidJWT(t *testing.T) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"sub":  "1234567890",
 		"name": "Test User",
+		"aud":  "test-audience",
 		"iat":  time.Now().Unix(),
 		"exp":  time.Now().Add(time.Hour).Unix(),
 	})
