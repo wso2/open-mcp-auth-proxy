@@ -40,31 +40,17 @@ func (p *defaultProvider) WellKnownHandler() http.HandlerFunc {
 				// Use configured response values
 				responseConfig := pathConfig.Response
 
-				// Get current host for proxy endpoints
-				scheme := "http"
-				if r.TLS != nil {
-					scheme = "https"
-				}
-				if forwardedProto := r.Header.Get("X-Forwarded-Proto"); forwardedProto != "" {
-					scheme = forwardedProto
-				}
-				host := r.Host
-				if forwardedHost := r.Header.Get("X-Forwarded-Host"); forwardedHost != "" {
-					host = forwardedHost
-				}
-				baseURL := scheme + "://" + host
-
 				authorizationEndpoint := responseConfig.AuthorizationEndpoint
 				if authorizationEndpoint == "" {
-					authorizationEndpoint = baseURL + "/authorize"
+					authorizationEndpoint = p.cfg.BaseURL + "/authorize"
 				}
 				tokenEndpoint := responseConfig.TokenEndpoint
 				if tokenEndpoint == "" {
-					tokenEndpoint = baseURL + "/token"
+					tokenEndpoint = p.cfg.BaseURL + "/token"
 				}
-				registraionEndpoint := responseConfig.RegistrationEndpoint
-				if registraionEndpoint == "" {
-					registraionEndpoint = baseURL + "/register"
+				registrationEndpoint := responseConfig.RegistrationEndpoint
+				if registrationEndpoint == "" {
+					registrationEndpoint = p.cfg.BaseURL + "/register"
 				}
 
 				// Build response from config
@@ -76,7 +62,7 @@ func (p *defaultProvider) WellKnownHandler() http.HandlerFunc {
 					"response_types_supported":              responseConfig.ResponseTypesSupported,
 					"grant_types_supported":                 responseConfig.GrantTypesSupported,
 					"token_endpoint_auth_methods_supported": []string{"client_secret_basic"},
-					"registration_endpoint":                 registraionEndpoint,
+					"registration_endpoint":                 registrationEndpoint,
 					"code_challenge_methods_supported":      responseConfig.CodeChallengeMethodsSupported,
 				}
 
