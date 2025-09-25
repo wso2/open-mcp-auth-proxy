@@ -42,31 +42,17 @@ func (p *asgardeoProvider) WellKnownHandler() http.HandlerFunc {
 			return
 		}
 
-		scheme := "http"
-		if r.TLS != nil {
-			scheme = "https"
-		}
-		if forwardedProto := r.Header.Get("X-Forwarded-Proto"); forwardedProto != "" {
-			scheme = forwardedProto
-		}
-		host := r.Host
-		if forwardedHost := r.Header.Get("X-Forwarded-Host"); forwardedHost != "" {
-			host = forwardedHost
-		}
-
-		baseURL := scheme + "://" + host
-
 		issuer := strings.TrimSuffix(p.cfg.AuthServerBaseURL, "/") + "/token"
 
 		response := map[string]interface{}{
 			"issuer":                                issuer,
-			"authorization_endpoint":                baseURL + "/authorize",
-			"token_endpoint":                        baseURL + "/token",
+			"authorization_endpoint":                p.cfg.BaseURL + "/authorize",
+			"token_endpoint":                        p.cfg.BaseURL + "/token",
 			"jwks_uri":                              p.cfg.JWKSURL,
 			"response_types_supported":              []string{"code"},
 			"grant_types_supported":                 []string{"authorization_code", "refresh_token"},
 			"token_endpoint_auth_methods_supported": []string{"client_secret_basic"},
-			"registration_endpoint":                 baseURL + "/register",
+			"registration_endpoint":                 p.cfg.BaseURL + "/register",
 			"code_challenge_methods_supported":      []string{"plain", "S256"},
 		}
 
